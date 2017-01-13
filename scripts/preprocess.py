@@ -74,9 +74,9 @@ def get_positions(img):
     # ball (only remaining object (if present))
     erosion = binary_erosion(binary_field, ball_element)
     if np.sum(erosion):
-        assert np.sum(erosion) == 1 # no other object detected
-        ball[0] = np.where(np.any(erosion, 0))[0][0]
-        ball[1] = np.where(np.any(erosion, 1))[0][0]
+        assert np.sum(erosion) in [1, 2] # no other object detected
+        ball[0] = np.mean(np.where(np.any(erosion, 0))[0])
+        ball[1] = np.mean(np.where(np.any(erosion, 1))[0])
     else: # place ball in front of oponnent (left bar)
         ball[0] = left_bar[0] + 2
         ball[1] = left_bar[1]
