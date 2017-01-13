@@ -88,9 +88,11 @@ def get_positions(img):
 def get_state(position_dict):
     # center field and normalize to -1..1
     position_dict['right_bar'] = (position_dict['right_bar'] - 80) / 80.0
+    position_dict['left_bar'] = (position_dict['left_bar'] - 80) / 80.0
     position_dict['ball'] = (position_dict['ball'] - 80) / 80.0
 
-    # y position of self (right bar) and ball (x,y) position
+    # y position of self, opponent and ball (x,y) position
     return np.array([position_dict['right_bar'][1], \
+        position_dict['left_bar'][0], \
         position_dict['ball'][0], \
         position_dict['ball'][1]])
