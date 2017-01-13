@@ -19,9 +19,11 @@ def get_positions(img):
 
     # find right bar
     left_bar = np.empty(2)
-    left_bar[:] = np.nan
+    left_bar[0] = np.mean(bar_left_columns)
+    left_bar[1] = 79.5
     right_bar = np.empty(2)
-    right_bar[:] = np.nan
+    right_bar[0] = np.mean(bar_left_columns)
+    right_bar[1] = 79.5
     ball = np.empty(2)
     ball[:] = np.nan
 
@@ -75,6 +77,9 @@ def get_positions(img):
         assert np.sum(erosion) == 1 # no other object detected
         ball[0] = np.where(np.any(erosion, 0))[0][0]
         ball[1] = np.where(np.any(erosion, 1))[0][0]
+    else: # place ball in front of oponnent (left bar)
+        ball[0] = left_bar[0] + 2
+        ball[1] = left_bar[1]
 
     return {'left_bar': left_bar, 'right_bar': right_bar, 'ball': ball}
 
