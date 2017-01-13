@@ -86,6 +86,6 @@ def get_state(position_dict):
     position_dict['ball'] = (position_dict['ball'] - 80) / 80.0
 
     # y position of self (right bar) and ball (x,y) position
-    return (position_dict['right_bar'][1], \
+    return np.array([position_dict['right_bar'][1], \
         position_dict['ball'][0], \
-        position_dict['ball'][1])
+        position_dict['ball'][1]])
