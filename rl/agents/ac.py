@@ -21,7 +21,6 @@ class ActorCriticAgent(Agent):
 	  critic_size: critic network hidden layer size
 	  epsilon: for epsilon probability do random action
       buffer_size: size of experience buffer
-      epoch: # of times agent play game
       gamma: future discount coefficient
       lr: learning rate
       decay: lr decay
@@ -38,7 +37,7 @@ class ActorCriticAgent(Agent):
 	"""
 	def __init__(self, mb_size = 32, state_size = None, action_size = None, verbose = True,
 				 actor_size = 8, critic_size = 8, epsilon = 1.0, buffer_size = 4096,
-				 epoch = 1000, gamma = 0.98, lr = 0.1, decay = 1e-6, momentum = 0.9, min_epsilon = 0.1, save_name = 'actor_critic', load = False, frequency = 5):
+				 gamma = 0.98, lr = 0.1, decay = 1e-6, momentum = 0.9, min_epsilon = 0.1, save_name = 'actor_critic', load = False, frequency = 5):
 
 		self.mb_size = mb_size
 		self.save_name = save_name
@@ -50,7 +49,7 @@ class ActorCriticAgent(Agent):
 		self.critic_size = critic_size
 		self.epsilon = epsilon
 		self.buffer_size = buffer_size
-		self.epoch = epoch
+
 		self.gamma = gamma
 		self.lr = lr
 		self.decay = decay
@@ -120,19 +119,20 @@ class ActorCriticAgent(Agent):
 		action = (np.argmax(qval))
 		return action
 
-	def train(self, env):
+	def train(self, env, epoch):
 		"""
-		Train agent in environment
+		Train agent in environment for some epoch
 
 		Arguments:
          env: gym environment
+         epoch: # of times agent play game
 		"""
 		wins = 0
 		losses = 0
 		best_actor_cost = 0
 		best_critic_cost = 0
 
-		for i in range(self.epoch):
+		for i in range(epoch):
 			observation = env.reset()
 			done = False
 			reward = 0
@@ -168,6 +168,7 @@ class ActorCriticAgent(Agent):
 
 				best_val = max((orig_val * self.gamma), target)
 
+
 				# Now append this to our critic replay buffer.
 				self.critic_replay.append([orig_state,best_val])
 				if done:
@@ -176,6 +177,8 @@ class ActorCriticAgent(Agent):
 				actor_delta = new_val - orig_val
 				self.actor_replay.append([orig_state, action, actor_delta])
 
+				while(len(self.critic_replay) > self.buffer_size): # Trim replay buffer
+					self.critic_replay.pop(0)
 				if(len(self.critic_replay) >= self.buffer_size):
 					minibatch = random.sample(self.critic_replay, self.mb_size)
 					X_train = []
@@ -191,6 +194,8 @@ class ActorCriticAgent(Agent):
 					h = self.critic_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
 					cost_critic += h.history['loss'][-1]
 
+				while(len(self.actor_replay) > self.buffer_size): # Trim replay buffer
+					self.actor_replay.pop(0)
 				if(len(self.actor_replay) >= self.buffer_size):
 					X_train = []
 					y_train = []
@@ -218,10 +223,6 @@ class ActorCriticAgent(Agent):
 						won = True
 					else: # Loss
 						losses += 1
-					self.actor_replay = []
-					self.actor_replay = []
-#					self.actor_replay = random.sample(self.actor_replay, self.buffer_size / 10)
-#					self.critic_replay = random.sample(self.critic_replay, self.buffer_size / 10)
 			# Finised Epoch
 			if self.verbose:
 				print("Costs, actor %s  | critic %s" % (cost_actor, cost_critic))
@@ -231,7 +232,7 @@ class ActorCriticAgent(Agent):
 				sys.stdout.flush()
 			### epsilon scheduling is totally ad-hoc
 			if self.epsilon > self.min_epsilon:
-				self.epsilon -= (1.0 / self.epoch)
+				self.epsilon -= (1.0 / epoch)
 			if won and self.epsilon > min_epsilon:
 				self.epsilon -= 0.02
 			if i % self.frequency == 0:
