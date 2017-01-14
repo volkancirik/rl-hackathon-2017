@@ -15,7 +15,6 @@ class experience_buffer():
             values = self.buffer[:, self.reward_index]
             types = np.unique(values)
             (hist, _) = np.histogram(values, bins=types.size)
-            print hist
             most_frequent_index = types[np.argmax(hist)] == values
             number_of_most_frequent_reward = np.sum(most_frequent_index)
             remove_index = np.where(most_frequent_index)[0][0:min(number_of_most_frequent_reward, number_to_remove)]
