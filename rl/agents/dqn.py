@@ -27,7 +27,7 @@ class QLearningAgent(Agent):
       number_of_episodes: number of episode
     """
     def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
-        state_size=6, action_size=3, verbose=True, \
+        state_size=6, action_size=3, verbose=False, \
         epsilon=1.0, min_epsilon=0.2, decay=0.9, number_of_episodes=100000):
         self.mb_size = mb_size
         self.save_name = save_name
@@ -101,6 +101,8 @@ class QLearningAgent(Agent):
             last_ball_position = np.array([np.NaN, np.NaN])
 
             replay_buffer = np.empty((self.dataset_size, self.state_size*2+2))
+            n_win = 0
+            n_loss = 0
 
             for j in range(self.dataset_size):
                 # select action a
@@ -120,6 +122,11 @@ class QLearningAgent(Agent):
 
                 # take action and get reward
                 (o_t1, r_t, done, _) = env.step(a_t)
+
+                if r_t == 1:
+                    n_win +=1
+                elif r_t == -1:
+                    n_loss += 1
 
                 # get state
                 positions = get_positions(o_t1, last_ball_position=last_ball_position)
@@ -151,14 +158,14 @@ class QLearningAgent(Agent):
                 tts[i] = rr + self.decay * np.max(qs)
 
             # train network
-            self.model.fit(sss, tts, nb_epoch=2, batch_size=self.mb_size, verbose=False)
+            self.model.fit(sss, tts, nb_epoch=5, batch_size=self.mb_size, verbose=False)
             self.model.save_weights(self.save_name + '.h5')
 
             # decay epsilon
-            self.epsilon -= 1.0 / min(self.number_of_episodes, 10)
+            self.epsilon -= 1.0 / min(self.number_of_episodes, 1000)
             self.epsilon = max(self.min_epsilon, self.epsilon)
-            if self.verbose:
-                print 'Epsilon', self.epsilon
+            print 'Episode', iepisode, 'Epsilon', self.epsilon, 'Wins', n_win, 'Losses', n_loss
+
 
 def merge_state_action(s_t, a_t):
     return np.concatenate((s_t, (a_t,)))[None, :]

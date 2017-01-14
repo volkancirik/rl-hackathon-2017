@@ -12,6 +12,9 @@ class experience_buffer():
         self.buffer_size = buffer_size
         self.reward_index = reward_index
 
+    '''
+    Adds new expereicnes (np.array of size entries x length). It replaces the oldest entries if necessary
+    '''
     def add(self, experience):
         number_to_remove = self.buffer.shape[0] + experience.shape[0] - self.buffer_size
 
@@ -23,14 +26,20 @@ class experience_buffer():
 
         self.buffer = np.append(self.buffer, experience, axis=0)
 
+    '''
+    Samples the buffer randomly
+    '''
     def sample(self, number_of_samples):
         return self.buffer[np.random.randint(0, self.buffer.shape[0], number_of_samples), :]
 
+    '''
+    Samples the buffer so that each reward has the same probability
+    '''
     def sample_equal(self, number_of_samples):
         values = self.buffer[:, self.reward_index]
         types = np.unique(values)
 
-        results = np.empty((number_of_samples, self.buffer.shape[1]));
+        results = np.empty((number_of_samples, self.buffer.shape[1]))
         number_inserted = 0
 
         # sample all rewards equally
