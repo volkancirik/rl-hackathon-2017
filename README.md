@@ -12,5 +12,5 @@ Starting from [CartPole](https://github.com/openai/gym/blob/master/gym/envs/clas
 You can find new environment code and an example notebook under this repository. You place `object_localization.py` under `/gym/envs/classic_control/`. Also, you need to edit a couple of initialization files as explained [here](https://github.com/openai/gym/wiki/Environments). Here's an agent in action in this environment:
 
 
-[](screenshots/gif.random.gif)
-[](screenshots/gif.moving.gif)
+[](screenshots/gif-random.gif)
+[](screenshots/gif-moving.gif)
