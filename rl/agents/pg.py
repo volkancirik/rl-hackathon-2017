@@ -38,13 +38,15 @@ class PGagent(Agent):
     def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
                  state_size=4, action_size=6,  \
                  epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000, \
-                 verbose = True, load=False):
+                 verbose = True, load=False, render=False, batch_size=10):
         self.mb_size = mb_size
         self.save_name = save_name
         self.state_size = state_size
         self.action_size = action_size
         self.epsilon = epsilon
         self.verbose = verbose
+        self.render = render
+        self.batch_size = batch_size
 
         self.decay = decay
         self.min_epsilon = min_epsilon
@@ -85,10 +87,10 @@ class PGagent(Agent):
         # 0,1 -> stay
         # 2,4 -> up
         # 3,5 -> down
-        aprob = model.predict(np.matrix(state))
+        aprob = self.model.predict(np.matrix(state))
         action = action_sample(aprob)
 
-        return action
+        return action, aprob
 
     def train(self, env):
         """
@@ -107,10 +109,10 @@ class PGagent(Agent):
         total = 0
         action_word = {1:'stay', 2:'up', 3:'down'}
         while(True):
-            if(render): env.render()
+            if(self.render): env.render()
 
             ## forward pass
-            action = self.act(s_t)
+            action, aprob = self.act(s_t)
             xs.append(s_t) #observed state
             dlogps.append(aprob) ## probability
             act.append(action-1)
@@ -133,7 +135,7 @@ class PGagent(Agent):
                 #pdb.set_trace()
                 env.reset()
 
-                if(episode_number % batch_size == 0):
+                if(episode_number % self.batch_size == 0):
                     epx = np.vstack(xs)
                     epdlogp = np.vstack(dlogps)
                     epr = np.vstack(drs)
@@ -150,7 +152,7 @@ class PGagent(Agent):
                     discounted_epr -= np.mean(discounted_epr)
                     discounted_epr /= np.std(discounted_epr)
 
-                    model.fit(x=epx,y=discounted_epr*eact, verbose=False)
+                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=False)
 
 
 def action_sample(aprob):
