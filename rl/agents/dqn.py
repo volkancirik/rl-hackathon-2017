@@ -26,9 +26,9 @@ class QLearningAgent(Agent):
       dataset_size: size of te replay memory
       number_of_episodes: number of episode
     """
-    def __init__(self, mb_size=32, save_name='dqn_hot', dataset_size=2000,\
+    def __init__(self, mb_size=32, save_name='dqn_hot_equal', dataset_size=2000,\
         state_size=6, action_size=3, verbose=False, \
-        epsilon=1.0, min_epsilon=0.2, decay=0.9, number_of_episodes=100000):
+        epsilon=1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000):
         self.mb_size = mb_size
         self.save_name = save_name
         self.state_size = 6 #state_size
@@ -41,7 +41,7 @@ class QLearningAgent(Agent):
         self.number_of_episodes = number_of_episodes
         self.dataset_size = dataset_size
 
-        self.buffer = experience_buffer(buffer_size=self.dataset_size, reward_index=self.state_size+1)
+        self.buffer = experience_buffer(buffer_size=2*self.dataset_size, reward_index=self.state_size+1)
 
         self.build_model()
 
@@ -144,7 +144,7 @@ class QLearningAgent(Agent):
                 if done:
                     s_t = get_state(get_positions(env.reset()), add_direction=True)
 
-            self.buffer.add(replay_buffer)
+            self.buffer.add_equal(replay_buffer)
             minibatch = self.buffer.sample_equal(self.dataset_size)
 
             # create targets (no terminal state in pong)
