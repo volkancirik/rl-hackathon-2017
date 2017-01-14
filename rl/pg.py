@@ -22,9 +22,9 @@ render = False
 
 ## model initialization
 model = M.Sequential()
-model.add(L.Dense(9, input_shape=(4,), activation='relu'))
-model.add(L.Dense(9, activation='relu'))
-model.add(L.Dense(9, activation='relu'))
+model.add(L.Dense(9, input_shape=(4,), activation='sigmoid'))
+model.add(L.Dense(9, activation='sigmoid'))
+#model.add(L.Dense(9, activation='relu'))
 model.add(L.Dense(3, activation='softmax'))
 model.compile(optimizer='adam', loss='categorical_crossentropy')
 
@@ -58,7 +58,7 @@ def discount_rewards(r):
 
 wins =0
 total = 0
-
+action_word = {1:'stay', 2:'up', 3:'down'}
 while(True):
     if(render): env.render()
 
@@ -77,6 +77,7 @@ while(True):
 
     if (reward !=0):
         total+=1
+        print(action_word[action])
     if(reward == 1):
         wins+=1
         print('Episode No: %5d  Reward: %d, Win/Loss: %d/%d' % (episode_number, reward, wins, total))
