@@ -53,7 +53,9 @@ Please Note: In the implementation of Vanilla Policy Gradients, we have used cro
 
 [Actor-Critic Methods](https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node66.html) employ two learning module. First, `Actor` observes a state and decides on an action. `Critic` *criticez* a state by assigning a value to the state. `Actor` gets training signal from the difference between `Critic`'s state value and observed reward. `Critic`, on the other hand, gets error signal directly from reward. Starting from [Greg Retkowski's implementation](https://github.com/gregretkowski/notebooks/blob/master/ActorCritic-with-OpenAI-Gym.ipynb), we first did unit tests on Gym's `FrozenLake`. We integrated Actor-Critic implementation to our unified RL agent and did experiments with Pong. Below are some screenshots:
 
-![Lazy Agent](screenshots/gif-pongLazy.gif) ![Loser Agent](screenshots/gif-pongLoser.gif)
+![Loser Agent](screenshots/gif-pongLoser.gif)
+
+Unfortunately the model does not learn a good policy in couple of hourse we have. But [here's a lazy one](https://www.youtube.com/watch?v=N4u-mmF64tQ) learned by chance where it achieves perfect score without doing much.
 
 ## Creating A New Environment
 If you would like to exploit the Gym for a target task in your mind, you can create a new environment. For an example, we would like to create an environment for a simplified computer vision problem.
