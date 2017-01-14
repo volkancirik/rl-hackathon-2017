@@ -146,6 +146,7 @@ class PGagent(Agent):
             if done: # an episode finished
                 ## train for k epochs
                 episode_number+=1
+                print('Episode No: %d' %(episode_number))
                 #pdb.set_trace()
                 env.reset()
 
@@ -166,7 +167,7 @@ class PGagent(Agent):
                     discounted_epr -= np.mean(discounted_epr)
                     discounted_epr /= np.std(discounted_epr)
 
-                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=True)
+                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=False)
                     self.model.save(self.save_name + '.h5')
 
 
