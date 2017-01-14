@@ -21,9 +21,10 @@ In addition to these awesome resources, there are bunch of open-source RL implem
 To move quickly we make use of following tools:
 - [OpenAI's Gym](https://gym.openai.com/docs) for experimental environment. Before writing a single line of code, we recommend reading the documentation.
 - [Keras](https://keras.io/) for quicky prototyping neural network models.
-- [Jupyter Notebooks](http://jupyter.org/) for fast and interactive development. 
+- [Jupyter Notebooks](http://jupyter.org/) for fast and interactive development.
 
 ## Algorithms
+Here we briefly explain 3 RL algorithms where we implemented in this repository. You can use the type of agent un `run_environment.py`. Please take a look at corresponding implementation under `rl/agents/`.
 
 ### Q-Learning
 
@@ -42,7 +43,7 @@ The x position of the two bars are not relevant, leaving 4 numbers. In addition 
 
 ## Creating A New Environment:
 If you would like to exploit the Gym for a target task in your mind, you can create a new environment. For an example, we would like to create an environment for a simplified computer vision problem.
-We would like to localize a target object in a scene. Here agent can move a frame and the aim is to find the object in this scene. 
+We would like to localize a target object in a scene. Here agent can move a frame and the aim is to find the object in this scene.
 
 ![Object Localization](http://research.microsoft.com/en-us/um/people/jingdw/salientobjectdetection/Salient%20Object%20Detection_files/2_reg.jpg "Object Localization Example")
 
