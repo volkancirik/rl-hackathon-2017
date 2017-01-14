@@ -45,7 +45,7 @@ In any game, the rewards are generally revealed at the end of a small segment. T
 
 The beauty of this method is that the policy gradient network could be anything, starting from multilayer-perceptrons(MLPs) to RNNs to CNNs, as long as they are capable of predicting an action. Given that, it should be noted that training a policy gradient network could be a pain as most of the data that is generated is random. This might result in the creation of a biased mini-match and may end up harming the training process, rather than helping it. One of the examples of a PG agent being trained is shown below.
 
-![Policy gradient Ping Pong](./screenshots/)
+![Policy gradient Ping Pong](./screenshots/gif-pg.gif)
 
 Please Note: In the implementation of Vanilla Policy Gradients, we have used crossentropy loss to train the MLP as a categorical classifier which is different from the standard approached of using MSE (mean square error) as the loss function.
 
