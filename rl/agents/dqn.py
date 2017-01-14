@@ -1,4 +1,5 @@
 import random
+import os
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -40,6 +41,8 @@ class QLearningAgent(Agent):
         model.add(Dense(1, activation='linear'))
 
         model.compile(optimizer='rmsprop', loss='mse')
+        if os.path.isfile(self.save_name + '.h5'):
+            model.load_weights(self.save_name + '.h5')
 
         self.model = model
 
@@ -58,6 +61,7 @@ class QLearningAgent(Agent):
         return q_values
 
     def train(self, env):
+        # todo: load model
         s_t = get_state(get_positions(env.reset()))
 
         for iepisode in range(self.number_of_episodes):
@@ -95,7 +99,7 @@ class QLearningAgent(Agent):
                     (o_t1, r_t, done, _) = env.step(a_t)
 
                     # get state
-                    if  get_positions(o_t1)['distance'] == 2.0:
+                    if  get_positions(o_t1)['distance'] <= 10.0:
                         r_t = 0.5
                     s_t1 = get_state(get_positions(o_t1))
 
@@ -123,7 +127,7 @@ class QLearningAgent(Agent):
 
             # train network
             self.model.fit(sss, tts, nb_epoch=100, batch_size=20)
-            self.model.save(self.save_name + '.h5')
+            self.model.save_weights(self.save_name + '.h5')
 
             # decay epsilon
             self.epsilon -= 1.0 / self.number_of_episodes

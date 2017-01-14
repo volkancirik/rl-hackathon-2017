@@ -81,7 +81,7 @@ def get_positions(img):
         ball[0] = left_bar[0] + 2
         ball[1] = left_bar[1]
 
-    distance_between_ball_and_left_bar = np.sqrt((ball[0]-left_bar[0])**2 + (ball[1]-left_bar[1])**2)
+    distance_between_ball_and_left_bar = np.sqrt((ball[0]-right_bar[0])**2 + (ball[1]-right_bar[1])**2)
 
     return {'left_bar': left_bar, 'right_bar': right_bar, 'ball': ball, 'distance': distance_between_ball_and_left_bar}
 
