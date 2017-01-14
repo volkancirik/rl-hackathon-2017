@@ -43,6 +43,8 @@ The current Q value (one the left) should be the currently received reward plus 
 ### Vanilla Policy Gradients
 In any game, the rewards are generally revealed at the end of a small segment. There might have been many action(s) which lead up to this reward and these actions might not have received the reward they deserved. The basic idea of Policy Gradients(PG) is to guesstimate the reward for the actions which ultimately lead to a win/loss. Unlike Q-learning, Q values are not estimated in this case, instead the next best action is predicted using the policy gradient network. After a fixed number of gampeplays (also called episodes), the data and the corresponding rewards are used to train the policy network to perform incrementally better.
 
+![Policy gradient Ping Pong](./screenshots/pg-flowchart.png)
+
 The beauty of this method is that the policy gradient network could be anything, starting from multilayer-perceptrons(MLPs) to RNNs to CNNs, as long as they are capable of predicting an action. Given that, it should be noted that training a policy gradient network could be a pain as most of the data that is generated is random. This might result in the creation of a biased mini-match and may end up harming the training process, rather than helping it. One of the examples of a PG agent being trained is shown below.
 
 ![Policy gradient Ping Pong](./screenshots/gif-pg.gif)
