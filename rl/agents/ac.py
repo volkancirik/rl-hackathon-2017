@@ -11,14 +11,34 @@ from ..scripts.preprocess import get_state, get_positions
 class ActorCriticAgent(Agent):
 	"""
 	Acton - Critic Agent based on https://github.com/gregretkowski/notebooks/blob/master/ActorCritic-with-OpenAI-Gym.ipynb
+
+	# Arguments:
+	  mb_size: mini batch size
+	  state_size: agents observed state's size
+      action_size: # of possible actions agent can make
+	  verbose: print to stdout
+	  actor_size: actor network hidden layer size
+	  critic_size: critic network hidden layer size
+	  epsilon: for epsilon probability do random action
+      buffer_size: size of experience buffer
+      epoch: # of times agent play game
+      gamma: future discount coefficient
+      lr: learning rate
+      decay: lr decay
+      momentum: lr momentum
+      min_epsilon: epsilon-greedy rate
+      save_name: agent model name
+      load: load from a previously trained model
+      frequency: save model every k epochs
+
+	# References:
+
 	TODO:
-		- add argument explanations
-		- explain RL algorithm
-		- save model files
+	 - render a game save to a file
 	"""
 	def __init__(self, mb_size = 32, state_size = None, action_size = None, verbose = True,
-				 actor_size = 128, critic_size = 128, epsilon = 1.0, buffer_size = 2048,
-				 epoch = 100, gamma = 0.99, lr = 0.1, decay = 1e-6, momentum = 0.9, min_epsilon = 0.1, save_name = 'actor_critic'):
+				 actor_size = 8, critic_size = 8, epsilon = 1.0, buffer_size = 4096,
+				 epoch = 1000, gamma = 0.98, lr = 0.1, decay = 1e-6, momentum = 0.9, min_epsilon = 0.1, save_name = 'actor_critic', load = False, frequency = 5):
 
 		self.mb_size = mb_size
 		self.save_name = save_name
@@ -37,18 +57,27 @@ class ActorCriticAgent(Agent):
 		self.momentum = momentum
 		self.min_epsilon = min_epsilon
 		self.save_name = save_name
+		self.frequency = frequency
 
 		self.actor_replay = []
 		self.critic_replay = []
 
-		self.build_model()
+		self.build_model(load)
 
-	def build_model(self):
+	def build_model(self, load):
+		"""
+		Builds neural networks.
+
+		Arguments:
+		 load: whether load from previously trained model
+		"""
 
 		actor_model = Sequential()
 		actor_model.add(Dense(self.actor_size, init='lecun_uniform', input_shape=(self.state_size,)))
 		actor_model.add(Activation('relu'))
-		actor_model.add(Dense(self.actor_size, init='lecun_uniform'))
+		actor_model.add(Dense(self.actor_size, init='lecun_uniform', input_shape=(self.state_size,)))
+		actor_model.add(Activation('relu'))
+		actor_model.add(Dense(self.actor_size, init='lecun_uniform', input_shape=(self.state_size,)))
 		actor_model.add(Activation('relu'))
 		actor_model.add(Dense(self.action_size, init='lecun_uniform'))
 		actor_model.add(Activation('linear'))
@@ -58,10 +87,13 @@ class ActorCriticAgent(Agent):
 
 		critic_model = Sequential()
 
-		critic_model.add(Dense(self.actor_size, init='lecun_uniform', input_shape=(self.state_size,)))
+		critic_model.add(Dense(self.critic_size, init='lecun_uniform', input_shape=(self.state_size,)))
 		critic_model.add(Activation('relu'))
-		critic_model.add(Dense(self.actor_size, init='lecun_uniform'))
+		critic_model.add(Dense(self.critic_size, init='lecun_uniform', input_shape=(self.state_size,)))
 		critic_model.add(Activation('relu'))
+		critic_model.add(Dense(self.critic_size, init='lecun_uniform', input_shape=(self.state_size,)))
+		critic_model.add(Activation('relu'))
+
 		critic_model.add(Dense(1, init='lecun_uniform'))
 		critic_model.add(Activation('linear'))
 
@@ -71,14 +103,34 @@ class ActorCriticAgent(Agent):
 		self.actor_model = actor_model
 		self.critic_model= critic_model
 
+		if load:
+			print("loading a previous model")
+			self.actor_model.load_weights('{}.actor.h5'.format(self.save_name))
+			self.critic_model.load_weights('{}.critic.h5'.format(self.save_name))
+
+
 	def act(self, state):
+		"""
+		Given a state, do an action using actor network
+
+		Arguments:
+		 state : state of the environment
+		"""
 		qval = self.actor_model.predict(state.reshape(1,self.state_size))
 		action = (np.argmax(qval))
 		return action
 
 	def train(self, env):
+		"""
+		Train agent in environment
+
+		Arguments:
+         env: gym environment
+		"""
 		wins = 0
 		losses = 0
+		best_actor_cost = 0
+		best_critic_cost = 0
 
 		for i in range(self.epoch):
 			observation = env.reset()
@@ -88,7 +140,11 @@ class ActorCriticAgent(Agent):
 			move_counter = 0
 			won = False
 
+			cost_actor = 0
+			cost_critic = 0
+
 			while(not done):
+
 				orig_state = get_state(get_positions(observation))
 				orig_reward = reward
 				orig_val = self.critic_model.predict(orig_state.reshape(1,self.state_size))
@@ -115,15 +171,11 @@ class ActorCriticAgent(Agent):
 				# Now append this to our critic replay buffer.
 				self.critic_replay.append([orig_state,best_val])
 				if done:
-					self.critic_replay.append( [new_state, float(new_reward)] )
+					self.critic_replay.append( [new_state, float(new_reward)])
 
 				actor_delta = new_val - orig_val
 				self.actor_replay.append([orig_state, action, actor_delta])
 
-				# Critic Replays...
-				while(len(self.critic_replay) > self.buffer_size): # Trim replay buffer
-					self.critic_replay.pop(0)
-					# Start training when we have enough samples.
 				if(len(self.critic_replay) >= self.buffer_size):
 					minibatch = random.sample(self.critic_replay, self.mb_size)
 					X_train = []
@@ -136,11 +188,9 @@ class ActorCriticAgent(Agent):
 						y_train.append(y.reshape((1,)))
 					X_train = np.array(X_train)
 					y_train = np.array(y_train)
-					self.critic_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
-			
-				# Actor Replays...
-				while(len(self.actor_replay) > self.buffer_size):
-					self.actor_replay.pop(0)
+					h = self.critic_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
+					cost_critic += h.history['loss'][-1]
+
 				if(len(self.actor_replay) >= self.buffer_size):
 					X_train = []
 					y_train = []
@@ -155,7 +205,8 @@ class ActorCriticAgent(Agent):
 						y_train.append(y.reshape((self.action_size,)))
 					X_train = np.array(X_train)
 					y_train = np.array(y_train)
-					self.actor_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
+					h = self.actor_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
+					cost_actor += h.history['loss'][-1]
 
 				# Bookkeeping at the end of the turn.
 				observation = new_observation
@@ -167,15 +218,23 @@ class ActorCriticAgent(Agent):
 						won = True
 					else: # Loss
 						losses += 1
+					self.actor_replay = []
+					self.actor_replay = []
+#					self.actor_replay = random.sample(self.actor_replay, self.buffer_size / 10)
+#					self.critic_replay = random.sample(self.critic_replay, self.buffer_size / 10)
 			# Finised Epoch
 			if self.verbose:
-				print("Game #: %s" % (i,))
+				print("Costs, actor %s  | critic %s" % (cost_actor, cost_critic))
+				print("Game #: %s"% (i,))
 				print("Moves this round %s" % move_counter)
 				print("Wins/Losses %s/%s epsilon : %s" % (wins, losses, self.epsilon))
 				sys.stdout.flush()
-
 			### epsilon scheduling is totally ad-hoc
 			if self.epsilon > self.min_epsilon:
 				self.epsilon -= (1.0 / self.epoch)
 			if won and self.epsilon > min_epsilon:
 				self.epsilon -= 0.02
+			if i % self.frequency == 0:
+				print("saving the models....")
+				self.actor_model.save_weights('{}.actor.h5'.format(self.save_name), True)
+				self.critic_model.save_weights('{}.critic.h5'.format(self.save_name), True)
