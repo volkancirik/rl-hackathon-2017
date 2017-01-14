@@ -44,10 +44,11 @@ The current Q value (one the left) should be the currently received reward plus 
 
 ### Actor-Critic Policy Gradients
 
+[Actor-Critic Methods](https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node66.html) employ two learning module. First, `Actor` observes a state and decides on an action. `Critic` *criticez* a state by assigning a value to the state. `Actor` gets training signal from the difference between `Critic`'s state value and observed reward. `Critic`, on the other hand, gets error signal directly from reward. Starting from [Greg Retkowski's implementation](https://github.com/gregretkowski/notebooks/blob/master/ActorCritic-with-OpenAI-Gym.ipynb), we first did unit tests on Gym's `FrozenLake`. We integrated Actor-Critic implementation to our unified RL agent and did experiments with Pong. Below are some screenshots:
 
+![Lazy Agent](screenshots/gif-pongLazy.gif) ![Loser Agent](screenshots/gif-pongLoser.gif)
 
-
-## Creating A New Environment:
+## Creating A New Environment
 If you would like to exploit the Gym for a target task in your mind, you can create a new environment. For an example, we would like to create an environment for a simplified computer vision problem.
 We would like to localize a target object in a scene. Here agent can move a frame and the aim is to find the object in this scene.
 
