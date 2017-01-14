@@ -4,7 +4,7 @@ import numpy as np
 from agent import Agent
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
-from keras.optimizers import RMSprop, SGD
+from keras.optimizers import Adam
 
 from ..scripts.preprocess import get_state, get_positions
 
@@ -22,9 +22,6 @@ class ActorCriticAgent(Agent):
 	  epsilon: for epsilon probability do random action
       buffer_size: size of experience buffer
       gamma: future discount coefficient
-      lr: learning rate
-      decay: lr decay
-      momentum: lr momentum
       min_epsilon: epsilon-greedy rate
       save_name: agent model name
       load: load from a previously trained model
@@ -35,9 +32,9 @@ class ActorCriticAgent(Agent):
 	TODO:
 	 - render a game save to a file
 	"""
-	def __init__(self, mb_size = 32, state_size = None, action_size = None, verbose = True,
-				 actor_size = 8, critic_size = 8, epsilon = 1.0, buffer_size = 4096,
-				 gamma = 0.98, lr = 0.1, decay = 1e-6, momentum = 0.9, min_epsilon = 0.1, save_name = 'actor_critic', load = False, frequency = 5):
+	def __init__(self, mb_size = 128, state_size = None, action_size = None, verbose = True,
+				 actor_size = 16, critic_size = 16, epsilon = 1.0, buffer_size = 4096,
+				 gamma = 0.98, min_epsilon = 0.1, save_name = 'actor_critic', load = False, frequency = 5, sample_action = False):
 
 		self.mb_size = mb_size
 		self.save_name = save_name
@@ -49,14 +46,11 @@ class ActorCriticAgent(Agent):
 		self.critic_size = critic_size
 		self.epsilon = epsilon
 		self.buffer_size = buffer_size
-
 		self.gamma = gamma
-		self.lr = lr
-		self.decay = decay
-		self.momentum = momentum
 		self.min_epsilon = min_epsilon
 		self.save_name = save_name
 		self.frequency = frequency
+		self.sample_action = sample_action
 
 		self.actor_replay = []
 		self.critic_replay = []
@@ -78,11 +72,12 @@ class ActorCriticAgent(Agent):
 		actor_model.add(Activation('relu'))
 		actor_model.add(Dense(self.actor_size, init='lecun_uniform', input_shape=(self.state_size,)))
 		actor_model.add(Activation('relu'))
-		actor_model.add(Dense(self.action_size, init='lecun_uniform'))
-		actor_model.add(Activation('linear'))
+		actor_model.add(Dense(self.action_size, init='lecun_uniform', activation = 'softmax'))
+#		actor_model.add(Activation('linear'))
 
-		a_optimizer = SGD(lr=self.lr, decay=self.decay, momentum=self.momentum, nesterov=True)
-		actor_model.compile(loss='mse', optimizer=a_optimizer)
+		a_optimizer = Adam()
+#		actor_model.compile(loss='mse', optimizer=a_optimizer)
+		actor_model.compile(loss='categorical_crossentropy', optimizer=a_optimizer)
 
 		critic_model = Sequential()
 
@@ -96,7 +91,7 @@ class ActorCriticAgent(Agent):
 		critic_model.add(Dense(1, init='lecun_uniform'))
 		critic_model.add(Activation('linear'))
 
-		c_optimizer = SGD(lr=self.lr, decay=self.decay, momentum=self.momentum, nesterov=True)
+		c_optimizer = Adam()
 		critic_model.compile(loss='mse', optimizer=c_optimizer)
 
 		self.actor_model = actor_model
@@ -108,15 +103,19 @@ class ActorCriticAgent(Agent):
 			self.critic_model.load_weights('{}.critic.h5'.format(self.save_name))
 
 
-	def act(self, state):
-		"""
+	def act(self, state, sample = False):
+		"""<
 		Given a state, do an action using actor network
 
 		Arguments:
 		 state : state of the environment
 		"""
 		qval = self.actor_model.predict(state.reshape(1,self.state_size))
-		action = (np.argmax(qval))
+
+		if sample:
+			action = np.random.choice(qval.reshape(self.action_size,))
+		else:
+			action = (np.argmax(qval.reshape))
 		return action
 
 	def train(self, env, epoch):
@@ -145,18 +144,29 @@ class ActorCriticAgent(Agent):
 
 			while(not done):
 
-				orig_state = get_state(get_positions(observation))
-				orig_reward = reward
+				pos = get_positions(observation)
+				orig_state = get_state(pos)
+
+				if pos['distance'] < 8:
+					reward = 0.5
+				else:
+					orig_reward = reward
 				orig_val = self.critic_model.predict(orig_state.reshape(1,self.state_size))
 
 				if (random.random() < self.epsilon): #choose random action
 					action = np.random.randint(0,self.action_size)
 				else: #choose best action from Q(s,a) values
-					action = self.act(orig_state)
+					action = self.act(orig_state, sample = self.sample_action)
 
 				#Take action, observe new state S'
 				new_observation, new_reward, done, info = env.step(action)
-				new_state = get_state(get_positions(new_observation))
+
+				pos = get_positions(new_observation)
+				new_state = get_state(pos)
+
+				if pos['distance'] < 8:
+					new_reward = 0.5
+
 				# Critic's value for this new state.
 				new_val = self.critic_model.predict(new_state.reshape(1,self.state_size))
 
@@ -180,7 +190,7 @@ class ActorCriticAgent(Agent):
 				while(len(self.critic_replay) > self.buffer_size): # Trim replay buffer
 					self.critic_replay.pop(0)
 				if(len(self.critic_replay) >= self.buffer_size):
-					minibatch = random.sample(self.critic_replay, self.mb_size)
+					minibatch = random.sample(self.critic_replay, self.buffer_size / 4)
 					X_train = []
 					y_train = []
 					for memory in minibatch:
@@ -191,7 +201,7 @@ class ActorCriticAgent(Agent):
 						y_train.append(y.reshape((1,)))
 					X_train = np.array(X_train)
 					y_train = np.array(y_train)
-					h = self.critic_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
+					h = self.critic_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=10, verbose=0)
 					cost_critic += h.history['loss'][-1]
 
 				while(len(self.actor_replay) > self.buffer_size): # Trim replay buffer
@@ -199,7 +209,7 @@ class ActorCriticAgent(Agent):
 				if(len(self.actor_replay) >= self.buffer_size):
 					X_train = []
 					y_train = []
-					minibatch = random.sample(self.actor_replay, self.mb_size)
+					minibatch = random.sample(self.actor_replay, self.buffer_size / 4)
 					for memory in minibatch:
 						m_orig_state, m_action, m_value = memory
 						old_qval = self.actor_model.predict( m_orig_state.reshape(1,self.state_size) )
@@ -210,7 +220,7 @@ class ActorCriticAgent(Agent):
 						y_train.append(y.reshape((self.action_size,)))
 					X_train = np.array(X_train)
 					y_train = np.array(y_train)
-					h = self.actor_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=1, verbose=0)
+					h = self.actor_model.fit(X_train, y_train, batch_size=self.mb_size, nb_epoch=10, verbose=0)
 					cost_actor += h.history['loss'][-1]
 
 				# Bookkeeping at the end of the turn.
