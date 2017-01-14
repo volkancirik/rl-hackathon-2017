@@ -15,7 +15,7 @@ env = gym.make(MY_ENV_NAME)
 OBSERVATION_SPACE = 4 ## could be more than that with concatenation of previous states
 ACTION_SPACE = env.action_space.n
 METHODS = {'dqn': QLearningAgent, 'ac': ActorCriticAgent, 'pg': PGagent}
-agent_type = 'dqn'
+agent_type = 'pg'
 
 agent = METHODS[agent_type](state_size = OBSERVATION_SPACE, action_size = ACTION_SPACE)
 agent.train(env)
