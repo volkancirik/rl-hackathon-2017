@@ -19,7 +19,7 @@ In addition to these awesome resources, there are bunch of open-source RL implem
 
 ### Tools
 To move quickly we make use of following tools:
-- [OpenAI's Gym](https://gym.openai.com/docs) for experimantal environment. Before writing a single line of code, we recommend reading the documentation.
+- [OpenAI's Gym](https://gym.openai.com/docs) for experimental environment. Before writing a single line of code, we recommend reading the documentation.
 - [Keras](https://keras.io/) for quicky prototyping neural network models.
 - [Jupyter Notebooks](http://jupyter.org/) for fast and interactive development. 
 
@@ -32,7 +32,15 @@ To move quickly we make use of following tools:
 ### Actor-Critic Policy Gradients
 
 
-## Creating A New Enrivornment:
+## From RGB-Pong to Number-Pong
+The OpenAI game [RGB-Pong](https://gym.openai.com/envs/Pong-v0) provides a 210x160x3 RGB images to be used as a state. We simplified this state to 6 numbers using image processing. The steps are visualized in this graphic:
+![RGB-Pong image processing](screenshots/image_processing.png)
+First we identify the field enclosed by the two white lines (1-3). Then we create a mask of all objects within the field by testing each pixel whether it is the background color (4). Both bars are 16x4. However, they can be partly occluded by the surrounding white lines. Therefore, we apply a erosion of 1x4 in the two columns where bars can occur to find them, we keep the center point of each bar (even if occluded; 5). After we have found the bars, we remove them and erode with 4x2 to find the remaining ball, which is never occluded (6).
+
+The x position of the two bars are not relevant, leaving 4 numbers. In addition with the  movement vector of the ball, we reduced RGB-Pong to 6 numbers. 
+
+
+## Creating A New Environment:
 If you would like to exploit the Gym for a target task in your mind, you can create a new environment. For an example, we would like to create an environment for a simplified computer vision problem.
 We would like to localize a target object in a scene. Here agent can move a frame and the aim is to find the object in this scene. 
 
