@@ -15,8 +15,9 @@ from ..scripts.preprocess import get_state, get_positions
 
 class QLearningAgent(Agent):
 
-    def __init__(self, mb_size=100, save_name='dqn', state_size=4, action_size=6,  \
-        epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=1000, \
+    def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
+        state_size=4, action_size=6,  \
+        epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000, \
         verbose = True):
         self.mb_size = mb_size
         self.save_name = save_name
@@ -28,17 +29,25 @@ class QLearningAgent(Agent):
         self.decay = decay
         self.min_epsilon = min_epsilon
         self.number_of_episodes = number_of_episodes
+        self.dataset_size = dataset_size
 
-        self.buffer = experience_buffer(buffer_size=1000, reward_index=5)
+        self.buffer = experience_buffer(buffer_size=self.dataset_size, reward_index=5)
 
         self.build_model()
 
     def build_model(self):
-        model = Sequential()
-        model.add(Dense(4, input_shape=(self.state_size+1,), activation='relu'))
-        model.add(Dense(4, activation='relu'))
-        model.add(Dense(4, activation='relu'))
-        model.add(Dense(1, activation='linear'))
+        if self.save_name == 'dqn':
+            model = Sequential()
+            model.add(Dense(4, input_shape=(self.state_size+1,), activation='relu'))
+            model.add(Dense(4, activation='relu'))
+            model.add(Dense(4, activation='relu'))
+            model.add(Dense(1, activation='linear'))
+        elif self.save_name == 'dqn2':
+            model = Sequential()
+            model.add(Dense(8, input_shape=(self.state_size+1,), activation='relu'))
+            model.add(Dense(8, activation='relu'))
+            model.add(Dense(8, activation='relu'))
+            model.add(Dense(1, activation='linear'))
 
         model.compile(optimizer='rmsprop', loss='mse')
         if os.path.isfile(self.save_name + '.h5'):
@@ -69,9 +78,9 @@ class QLearningAgent(Agent):
                 print 'Episode', iepisode
 
             for _ in range(3):
-                replay_buffer = np.empty((self.mb_size, self.state_size*2+2))
+                replay_buffer = np.empty((self.dataset_size/2, self.state_size*2+2))
 
-                for j in range(self.mb_size):
+                for j in range(replay_buffer.shape[0]):
                     # select action a
                     if random.random() > self.epsilon:
                         a_t = self.act(s_t)
@@ -99,7 +108,7 @@ class QLearningAgent(Agent):
                     (o_t1, r_t, done, _) = env.step(a_t)
 
                     # get state
-                    if  get_positions(o_t1)['distance'] <= 10.0:
+                    if  get_positions(o_t1)['distance'] <= 8.0:
                         r_t = 0.5
                     s_t1 = get_state(get_positions(o_t1))
 
@@ -114,7 +123,7 @@ class QLearningAgent(Agent):
 
                 self.buffer.add(replay_buffer)
 
-            minibatch = self.buffer.sample(self.mb_size)
+            minibatch = self.buffer.sample(self.dataset_size)
 
             # create targets (no terminal state in pong)
             tts = np.zeros((minibatch.shape[0], 1))
@@ -126,11 +135,11 @@ class QLearningAgent(Agent):
                 sss[i, :] = merge_state_action(ss, aa)
 
             # train network
-            self.model.fit(sss, tts, nb_epoch=100, batch_size=20)
+            self.model.fit(sss, tts, nb_epoch=2, batch_size=self.mb_size, verbose=False)
             self.model.save_weights(self.save_name + '.h5')
 
             # decay epsilon
-            self.epsilon -= 1.0 / self.number_of_episodes
+            self.epsilon -= 1.0 / min(self.number_of_episodes, 1000)
             self.epsilon = max(self.min_epsilon, self.epsilon)
             if self.verbose:
                 print 'Epsilon', self.epsilon

@@ -1,6 +1,5 @@
 
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy.ndimage.morphology import binary_erosion
 
 start_field = (20, 34)
@@ -14,7 +13,6 @@ def get_positions(img):
     field = img[start_field[1]:end_field[1], :, :]
     background_color = np.array([np.median(field[:, :, 0]), np.median(field[:, :, 1]), np.median(field[:, :, 2])])
     binary_field = np.any(field != background_color, 2)
-    rows = np.where(np.any(binary_field, 1))[0]
     columns = np.where(np.any(binary_field, 0))[0]
 
     # find right bar

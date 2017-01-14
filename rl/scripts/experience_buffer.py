@@ -2,7 +2,7 @@
 import numpy as np
 
 class experience_buffer():
-    def __init__(self, buffer_size=1000, reward_index=5):
+    def __init__(self, buffer_size=2000, reward_index=5):
         self.buffer = np.empty((0,))
         self.buffer_size = buffer_size
         self.reward_index = reward_index
