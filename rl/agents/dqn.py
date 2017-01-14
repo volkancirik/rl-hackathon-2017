@@ -9,8 +9,8 @@ from keras.models import Sequential
 from keras.layers import Dense
 
 from agent import Agent
-from scripts.experience_buffer import experience_buffer
-from scripts.preprocess import get_state, get_positions
+from ..scripts.experience_buffer import experience_buffer
+from ..scripts.preprocess import get_state, get_positions
 
 class QLearningAgent(Agent):
 
@@ -97,6 +97,7 @@ class QLearningAgent(Agent):
                     (o_t1, r_t, done, _) = env.step(a_t)
 
                     # get state
+                    print get_positions(o_t1)['distance']
                     s_t1 = get_state(get_positions(o_t1))
 
                     # replay memory
