@@ -35,10 +35,10 @@ class PGagent(Agent):
       dataset_size: size of te replay memory
       number_of_episodes: number of episode
     """
-    def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
+    def __init__(self, mb_size=32, save_name='pg', dataset_size=2000,\
                  state_size=4, action_size=6,  \
                  epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000, \
-                 verbose = True, load=False, render=False, batch_size=10):
+                 verbose = False, load=True, render=False, batch_size=10, gamma = 0.99):
         self.mb_size = mb_size
         self.save_name = save_name
         self.state_size = state_size
@@ -47,6 +47,7 @@ class PGagent(Agent):
         self.verbose = verbose
         self.render = render
         self.batch_size = batch_size
+        self.gamma = gamma
 
         self.decay = decay
         self.min_epsilon = min_epsilon
@@ -55,6 +56,17 @@ class PGagent(Agent):
 
         self.build_model(load)
 
+    def discount_rewards(self,r):
+        """ take 1D float array of rewards and compute discounted reward """
+        discounted_r = np.zeros_like(r)
+        running_add = 0
+        for t in reversed(range(0, r.size)):
+            if r[t] != 0: running_add = 0 # reset the sum, since this was a game boundary (pong specific!)
+            running_add = running_add * self.gamma + r[t]
+            discounted_r[t] = running_add
+        return discounted_r
+
+        
     def build_model(self, load):
         """
         Builds neural networks. Loads previous weights autoamtically.
@@ -71,6 +83,7 @@ class PGagent(Agent):
         if (load):
             try:
                 model.load_weights(self.save_name + '.h5')
+                print ('Loaded saved model')
             except:
                 print('Coudn\'t find the model. Initialising randomly')
 
@@ -124,7 +137,8 @@ class PGagent(Agent):
 
             if (reward !=0):
                 total+=1
-                print(action_word[action])
+                if self.verbose:
+                    print(action_word[action])
             if(reward == 1):
                 wins+=1
                 print('Episode No: %5d  Reward: %d, Win/Loss: %d/%d' % (episode_number, reward, wins, total))
@@ -148,11 +162,12 @@ class PGagent(Agent):
 
                     xs, dlogps, drs, act = [],[],[],[] # reset arrays
                     # compute the discounted rewards backwards
-                    discounted_epr = discount_rewards(epr)
+                    discounted_epr = self.discount_rewards(epr)
                     discounted_epr -= np.mean(discounted_epr)
                     discounted_epr /= np.std(discounted_epr)
 
-                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=False)
+                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=True)
+                    self.model.save(self.save_name + '.h5')
 
 
 def action_sample(aprob):
@@ -166,12 +181,3 @@ def action_sample(aprob):
         if(sample < cumm_aprob[0,i]):
             return i+1
 
-def discount_rewards(r):
-    """ take 1D float array of rewards and compute discounted reward """
-    discounted_r = np.zeros_like(r)
-    running_add = 0
-    for t in reversed(range(0, r.size)):
-        if r[t] != 0: running_add = 0 # reset the sum, since this was a game boundary (pong specific!)
-        running_add = running_add * gamma + r[t]
-        discounted_r[t] = running_add
-    return discounted_r
