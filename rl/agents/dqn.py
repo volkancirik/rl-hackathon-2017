@@ -164,7 +164,7 @@ class QLearningAgent(Agent):
             # decay epsilon
             self.epsilon -= 1.0 / min(self.number_of_episodes, 1000)
             self.epsilon = max(self.min_epsilon, self.epsilon)
-            if n_win == 0 and self.epsilon < 0.5:
+            if n_win == 0 and self.epsilon < 0.4:
                 self.epsilon += 1.0 / min(self.number_of_episodes, 100)
 
             print 'Episode', iepisode, 'Epsilon', self.epsilon, 'Wins', n_win, 'Losses', n_loss

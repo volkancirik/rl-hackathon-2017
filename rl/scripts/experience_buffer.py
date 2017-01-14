@@ -40,7 +40,6 @@ class experience_buffer():
             types = np.unique(values)
             hist_fun = np.vectorize(lambda x: np.sum(x == values))
             hist = hist_fun(types)
-            print hist
             most_frequent_index = types[np.argmax(hist)] == values
             number_of_most_frequent_reward = np.sum(most_frequent_index)
             remove_index = np.where(most_frequent_index)[0][0:min(number_of_most_frequent_reward, number_to_remove)]
