@@ -1,6 +1,3 @@
-import sys
-sys.path.append('../scripts')
-
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -9,8 +6,8 @@ import gym
 from keras.models import Sequential
 from keras.layers import Dense
 
-from preprocess import get_positions, get_state
-from experience_buffer import experience_buffer
+from scripts.preprocess import get_positions, get_state
+from scripts.experience_buffer import experience_buffer
 
 number_of_actions = 6
 length_of_states = 4
@@ -35,7 +32,7 @@ def run():
         for _ in range(5):
             replay_buffer = np.empty((batch_size, length_of_states*2+2))
 
-            for j in range(batch_size):# better than random; stack states; read about q learning
+            for j in range(batch_size):# stack states; read about q learning
                 # select action a
                 if i < 50:
                     if np.random.randint(0, 5) == 0:
@@ -124,9 +121,9 @@ def unpacakge_replay(package):
 
 def init_model():
     model = Sequential()
-    model.add(Dense(6, input_shape=(length_of_states+1,), activation='relu'))
-    model.add(Dense(6, activation='relu'))
-    model.add(Dense(6, activation='relu'))
+    model.add(Dense(4, input_shape=(length_of_states+1,), activation='relu'))
+    model.add(Dense(4, activation='relu'))
+    model.add(Dense(4, activation='relu'))
     model.add(Dense(1, activation='linear'))
 
     model.compile(optimizer='rmsprop', loss='mse')
