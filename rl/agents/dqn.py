@@ -2,9 +2,6 @@ import random
 import os
 
 import numpy as np
-from matplotlib import pyplot as plt
-
-import gym
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -30,13 +27,12 @@ class QLearningAgent(Agent):
       number_of_episodes: number of episode
     """
     def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
-        state_size=4, action_size=6,  \
-        epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000, \
-        verbose = True):
+        state_size=6, action_size=3, verbose=True, \
+        epsilon=1.0, min_epsilon=0.2, decay=0.9, number_of_episodes=100000):
         self.mb_size = mb_size
         self.save_name = save_name
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state_size = 6 #state_size
+        self.action_size = 3 # action_size
         self.epsilon = epsilon
         self.verbose = verbose
 
@@ -45,7 +41,7 @@ class QLearningAgent(Agent):
         self.number_of_episodes = number_of_episodes
         self.dataset_size = dataset_size
 
-        self.buffer = experience_buffer(buffer_size=self.dataset_size, reward_index=5)
+        self.buffer = experience_buffer(buffer_size=self.dataset_size, reward_index=self.state_size+1)
 
         self.build_model()
 
@@ -53,20 +49,13 @@ class QLearningAgent(Agent):
         """
         Builds neural networks. Loads previous weights autoamtically.
         """
-        if self.save_name == 'dqn':
-            model = Sequential()
-            model.add(Dense(4, input_shape=(self.state_size+1,), activation='relu'))
-            model.add(Dense(4, activation='relu'))
-            model.add(Dense(4, activation='relu'))
-            model.add(Dense(1, activation='linear'))
-        elif self.save_name == 'dqn2':
-            model = Sequential()
-            model.add(Dense(8, input_shape=(self.state_size+1,), activation='relu'))
-            model.add(Dense(8, activation='relu'))
-            model.add(Dense(8, activation='relu'))
-            model.add(Dense(1, activation='linear'))
+        model = Sequential()
+        model.add(Dense(4, input_shape=(self.state_size+1,), activation='relu', init='lecun_uniform'))
+        model.add(Dense(8, activation='relu', init='lecun_uniform'))
+        model.add(Dense(8, activation='relu', init='lecun_uniform'))
+        model.add(Dense(1, activation='linear', init='lecun_uniform'))
 
-        model.compile(optimizer='rmsprop', loss='mse')
+        model.compile(optimizer='adam', loss='mse')
         if os.path.isfile(self.save_name + '.h5'):
             model.load_weights(self.save_name + '.h5')
 
@@ -83,8 +72,7 @@ class QLearningAgent(Agent):
         # 0,1 -> stay
         # 2,4 -> up
         # 3,5 -> down
-        a_t = np.argmax(self.get_q_values(state))
-        return a_t
+        return 1+np.argmax(self.get_q_values(state))
 
     def get_q_values(self, state):
         """
@@ -95,7 +83,7 @@ class QLearningAgent(Agent):
         """
         q_values = np.zeros((self.action_size, ))
         for a in range(q_values.size):
-            q_values[a] = self.model.predict(merge_state_action(state, a))
+            q_values[a] = self.model.predict(merge_state_action(state, 1+a))
         return q_values
 
     def train(self, env):
@@ -105,83 +93,75 @@ class QLearningAgent(Agent):
         Arguments:
          env: gym environment
         """
-        s_t = get_state(get_positions(env.reset()))
+        s_t = get_state(get_positions(env.reset()), add_direction=True)
 
         for iepisode in range(self.number_of_episodes):
             if self.verbose:
                 print 'Episode', iepisode
+            last_ball_position = np.array([np.NaN, np.NaN])
 
-            for _ in range(3):
-                replay_buffer = np.empty((self.dataset_size/2, self.state_size*2+2))
+            replay_buffer = np.empty((self.dataset_size, self.state_size*2+2))
 
-                for j in range(replay_buffer.shape[0]):
-                    # select action a
-                    if random.random() > self.epsilon:
-                        a_t = self.act(s_t)
-                        
+            for j in range(self.dataset_size):
+                # select action a
+                if random.random() > self.epsilon:
+                    a_t = self.act(s_t)
+                else:
+                    distance = s_t[0] - s_t[3]
+                    if distance > 0.3:
+                        a_t = 2
+                    elif distance < -0.3:
+                        a_t = 3
                     else:
-                        distance = s_t[0] - s_t[-1]
-                        if distance > 0.2:
-                            a_t = 2
-                        elif distance > 0.08:
-                            a_t = 4
-                        elif distance < -0.2:
-                            a_t = 3
-                        elif distance < -0.08:
-                            a_t = 5
-                        else:
-                            if random.random() < 0.5:
-                                a_t = 0
-                            else:
-                                a_t = 1
+                        a_t = np.random.randint(1, 4)
 
-                    if self.verbose:
-                        env.render()
+                if self.verbose:
+                    env.render()
 
-                    # take action and get reward
-                    (o_t1, r_t, done, _) = env.step(a_t)
+                # take action and get reward
+                (o_t1, r_t, done, _) = env.step(a_t)
 
-                    # get state
-                    if  get_positions(o_t1)['distance'] <= 8.0:
-                        r_t = 0.5
-                    s_t1 = get_state(get_positions(o_t1))
+                # get state
+                positions = get_positions(o_t1, last_ball_position=last_ball_position)
+                last_ball_position = positions['last_ball_position']
+                if  positions['distance'] <= 8.0:
+                    r_t = 0.1
+                s_t1 = get_state(positions, add_direction=True)
 
-                    # replay memory
-                    replay_buffer[j, :] = package_replay(s_t, a_t, r_t, s_t1)
+                # replay memory
+                replay_buffer[j, :] = package_replay(s_t, a_t, r_t, s_t1)
 
-                    s_t = s_t1
+                s_t = s_t1
 
-                    # reset env
-                    if done:
-                        s_t = get_state(get_positions(env.reset()))
+                # reset env
+                if done:
+                    s_t = get_state(get_positions(env.reset()), add_direction=True)
 
-                self.buffer.add(replay_buffer)
-
-            minibatch = self.buffer.sample(self.dataset_size)
+            self.buffer.add(replay_buffer)
+            minibatch = self.buffer.sample_equal(self.dataset_size)
 
             # create targets (no terminal state in pong)
             tts = np.zeros((minibatch.shape[0], 1))
             sss = np.zeros((minibatch.shape[0], s_t.size+1))
             for i in range(0, tts.shape[0]):
                 (ss, aa, rr, ss_) = unpackage_replay(minibatch[i, :])
+                sss[i, :] = merge_state_action(ss, aa)
+
                 qs = self.get_q_values(ss_)
                 tts[i] = rr + self.decay * np.max(qs)
-                sss[i, :] = merge_state_action(ss, aa)
 
             # train network
             self.model.fit(sss, tts, nb_epoch=2, batch_size=self.mb_size, verbose=False)
             self.model.save_weights(self.save_name + '.h5')
 
             # decay epsilon
-            self.epsilon -= 1.0 / min(self.number_of_episodes, 1000)
+            self.epsilon -= 1.0 / min(self.number_of_episodes, 10)
             self.epsilon = max(self.min_epsilon, self.epsilon)
             if self.verbose:
                 print 'Epsilon', self.epsilon
 
 def merge_state_action(s_t, a_t):
-    merged = np.zeros((1, s_t.size+1))
-    merged[-1] = a_t
-    return merged
+    return np.concatenate((s_t, (a_t,)))[None, :]
 
 def package_replay(s_t, a_t, r_t, s_t1):
     package = np.zeros((s_t.size*2 + 2))

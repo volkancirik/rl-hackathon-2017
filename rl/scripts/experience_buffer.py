@@ -2,7 +2,10 @@ import numpy as np
 
 class experience_buffer():
     '''
-    Basically a queue but it removes entries with with high occuring rewards perfore other entries
+    Basically a queue, with options to equally smaple rewards:
+     - add:     np.arrays of size nxm
+     - sample:  randomly smaple the buffer
+     - sample_equal samples all reward types equally
     '''
     def __init__(self, buffer_size=2000, reward_index=5):
         self.buffer = np.empty((0,))
@@ -12,21 +15,33 @@ class experience_buffer():
     def add(self, experience):
         number_to_remove = self.buffer.shape[0] + experience.shape[0] - self.buffer_size
 
-        while number_to_remove > 0:
-            # remove most frequent reward
-            values = self.buffer[:, self.reward_index]
-            types = np.unique(values)
-            (hist, _) = np.histogram(values, bins=types.size)
-            most_frequent_index = types[np.argmax(hist)] == values
-            number_of_most_frequent_reward = np.sum(most_frequent_index)
-            remove_index = np.where(most_frequent_index)[0][0:min(number_of_most_frequent_reward, number_to_remove)]
-            keep_index = np.setdiff1d(np.arange(self.buffer.shape[0]), remove_index)
-            self.buffer = self.buffer[keep_index, :]
-            number_to_remove -= remove_index.size
+        if number_to_remove > 0:
+            self.buffer = self.buffer[number_to_remove:, :]
 
         if self.buffer.size == 0:
             self.buffer = np.empty(np.concatenate(([0], experience.shape[1:])))
+
         self.buffer = np.append(self.buffer, experience, axis=0)
 
     def sample(self, number_of_samples):
-        return self.buffer[np.random.randint(0, len(self.buffer), number_of_samples), :]
+        return self.buffer[np.random.randint(0, self.buffer.shape[0], number_of_samples), :]
+
+    def sample_equal(self, number_of_samples):
+        values = self.buffer[:, self.reward_index]
+        types = np.unique(values)
+
+        results = np.empty((number_of_samples, self.buffer.shape[1]));
+        number_inserted = 0
+
+        # sample all rewards equally
+        for i in range(types.size):
+            index = np.where(types[i] == values)[0]
+            new_data = self.buffer[index[np.random.randint(0, index.size, np.int(np.floor(number_of_samples/types.size)))], :]
+            results[number_inserted:number_inserted+new_data.shape[0], :] = new_data
+            number_inserted += new_data.shape[0]
+
+        # fill remaining slots
+        if number_inserted < number_of_samples:
+            results[number_inserted:, :] = self.sample(number_of_samples - number_inserted)
+
+        return results
