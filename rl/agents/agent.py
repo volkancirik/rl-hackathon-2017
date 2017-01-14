@@ -14,7 +14,7 @@ class Agent(object):
 
 	def build_model(self):
 		return
-	def act(self):
+	def act(self, state):
 		return
 	def train(self, env):
 		return
