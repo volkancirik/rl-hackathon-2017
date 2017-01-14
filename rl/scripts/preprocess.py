@@ -9,6 +9,12 @@ bar_right_columns = np.array([140, 141, 142, 143])
 bar_left_columns = np.array([16, 17, 18, 19])
 
 def get_positions(img):
+    '''
+    Parses the akari RGB images and returns a dict with:
+     - left/right bar position
+     - ball position
+     - distance between balla nd right bar (our agent)
+    '''
     # preprocessing
     field = img[start_field[1]:end_field[1], :, :]
     background_color = np.array([np.median(field[:, :, 0]), np.median(field[:, :, 1]), np.median(field[:, :, 2])])
@@ -86,6 +92,9 @@ def get_positions(img):
 
 
 def get_state(position_dict):
+    '''
+    Given the psotions dict, it returns a subset of normalized positions
+    '''
     # center field and normalize to -1..1
     position_dict['right_bar'] = (position_dict['right_bar'] - 80) / 80.0
     position_dict['left_bar'] = (position_dict['left_bar'] - 80) / 80.0

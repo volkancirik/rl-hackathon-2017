@@ -14,7 +14,21 @@ from ..scripts.experience_buffer import experience_buffer
 from ..scripts.preprocess import get_state, get_positions
 
 class QLearningAgent(Agent):
+    """
+    QLearning Agent based on https://www.nervanasys.com/demystifying-deep-reinforcement-learning/
 
+    # Arguments:
+      mb_size: mini batch size
+      state_size: agents observed state's size
+      action_size: # of possible actions agent can make
+      verbose: print to stdout
+      epsilon: for epsilon probability do random action
+      decay: lr decay
+      min_epsilon: epsilon-greedy rate
+      save_name: agent model name
+      dataset_size: size of te replay memory
+      number_of_episodes: number of episode
+    """
     def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
         state_size=4, action_size=6,  \
         epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000, \
@@ -36,6 +50,9 @@ class QLearningAgent(Agent):
         self.build_model()
 
     def build_model(self):
+        """
+        Builds neural networks. Loads previous weights autoamtically.
+        """
         if self.save_name == 'dqn':
             model = Sequential()
             model.add(Dense(4, input_shape=(self.state_size+1,), activation='relu'))
@@ -56,6 +73,12 @@ class QLearningAgent(Agent):
         self.model = model
 
     def act(self, state):
+        """
+        Given a state, do an action using actor network
+
+        Arguments:
+         state : state of the environment
+        """
         # argmax a Q(state, action)
         # 0,1 -> stay
         # 2,4 -> up
@@ -64,13 +87,24 @@ class QLearningAgent(Agent):
         return a_t
 
     def get_q_values(self, state):
+        """
+        Returns Q values for all actions given a state.
+
+        Arguments:
+         state: state of the environment
+        """
         q_values = np.zeros((self.action_size, ))
         for a in range(q_values.size):
             q_values[a] = self.model.predict(merge_state_action(state, a))
         return q_values
 
     def train(self, env):
-        # todo: load model
+        """
+        Train agent in environment
+
+        Arguments:
+         env: gym environment
+        """
         s_t = get_state(get_positions(env.reset()))
 
         for iepisode in range(self.number_of_episodes):
