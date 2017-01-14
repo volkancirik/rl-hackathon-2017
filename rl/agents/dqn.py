@@ -49,8 +49,6 @@ class QLearningAgent(Agent):
         # 2,4 -> up
         # 3,5 -> down
         a_t = np.argmax(self.get_q_values(state))
-        if self.verbose:
-            print 'argmax:', a_t
         return a_t
 
     def get_q_values(self, state):
@@ -69,7 +67,7 @@ class QLearningAgent(Agent):
             for _ in range(3):
                 replay_buffer = np.empty((self.mb_size, self.state_size*2+2))
 
-                for j in range(self.mb_size):# stack states; read about q learning
+                for j in range(self.mb_size):
                     # select action a
                     if random.random() > self.epsilon:
                         a_t = self.act(s_t)
@@ -97,7 +95,8 @@ class QLearningAgent(Agent):
                     (o_t1, r_t, done, _) = env.step(a_t)
 
                     # get state
-                    print get_positions(o_t1)['distance']
+                    if  get_positions(o_t1)['distance'] == 2.0:
+                        r_t = 0.5
                     s_t1 = get_state(get_positions(o_t1))
 
                     # replay memory
@@ -124,10 +123,13 @@ class QLearningAgent(Agent):
 
             # train network
             self.model.fit(sss, tts, nb_epoch=100, batch_size=20)
+            self.model.save(self.save_name + '.h5')
 
             # decay epsilon
-            self.epsilon -= 1 / self.number_of_episodes
-            self.epsilon = min(self.min_epsilon, self.epsilon)
+            self.epsilon -= 1.0 / self.number_of_episodes
+            self.epsilon = max(self.min_epsilon, self.epsilon)
+            if self.verbose:
+                print 'Epsilon', self.epsilon
 
 def merge_state_action(s_t, a_t):
     merged = np.zeros((1, s_t.size+1))
