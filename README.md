@@ -13,4 +13,5 @@ You can find new environment code and an example notebook under this repository.
 
 
 ![Random Agent](screenshots/gif-random.gif)
+
 ![Agent Moving to Object](screenshots/gif-moving.gif)
