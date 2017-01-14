@@ -24,7 +24,16 @@ To move quickly we make use of following tools:
 - [Jupyter Notebooks](http://jupyter.org/) for fast and interactive development.
 
 ## Algorithms
-Here we briefly explain 3 RL algorithms where we implemented in this repository. You can use the type of agent un `run_environment.py`. Please take a look at corresponding implementation under `rl/agents/`.
+Here we briefly explain 3 RL algorithms where we implemented in this repository. You can use the type of agent un `run_environment.py`. Please take a look at corresponding implementation under `rl/agents/`. We use Pong as an example environment. But first we do preprocessing so that we can do faster experiments.
+
+##### From RGB-Pong to Number-Pong
+The OpenAI game [RGB-Pong](https://gym.openai.com/envs/Pong-v0) provides a 210x160x3 RGB images to be used as a state. We simplified this state to 6 numbers using image processing. The steps are visualized in this graphic:
+
+![RGB-Pong image processing](screenshots/image_processing.png)
+
+First we identify the field enclosed by the two white lines (1-3). Then we create a mask of all objects within the field by testing each pixel whether it is the background color (4). Both bars are 16x4. However, they can be partly occluded by the surrounding white lines. Therefore, we apply a erosion of 1x4 in the two columns where bars can occur to find them, we keep the center point of each bar (even if occluded; 5). After we have found the bars, we remove them and erode with 4x2 to find the remaining ball, which is never occluded (6).
+
+The x position of the two bars are not relevant, leaving 4 numbers. In addition with the  movement vector of the ball, we reduced RGB-Pong to 6 numbers.
 
 ### Q-Learning
 
@@ -33,12 +42,6 @@ Here we briefly explain 3 RL algorithms where we implemented in this repository.
 ### Actor-Critic Policy Gradients
 
 
-## From RGB-Pong to Number-Pong
-The OpenAI game [RGB-Pong](https://gym.openai.com/envs/Pong-v0) provides a 210x160x3 RGB images to be used as a state. We simplified this state to 6 numbers using image processing. The steps are visualized in this graphic:
-![RGB-Pong image processing](screenshots/image_processing.png)
-First we identify the field enclosed by the two white lines (1-3). Then we create a mask of all objects within the field by testing each pixel whether it is the background color (4). Both bars are 16x4. However, they can be partly occluded by the surrounding white lines. Therefore, we apply a erosion of 1x4 in the two columns where bars can occur to find them, we keep the center point of each bar (even if occluded; 5). After we have found the bars, we remove them and erode with 4x2 to find the remaining ball, which is never occluded (6).
-
-The x position of the two bars are not relevant, leaving 4 numbers. In addition with the  movement vector of the ball, we reduced RGB-Pong to 6 numbers. 
 
 
 ## Creating A New Environment:
