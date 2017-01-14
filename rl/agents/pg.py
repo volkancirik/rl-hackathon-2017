@@ -21,7 +21,7 @@ from ..scripts.experience_buffer import experience_buffer
 
 class PGagent(Agent):
     """
-    QLearning Agent based on https://www.nervanasys.com/demystifying-deep-reinforcement-learning/
+    Policy Gradient Learning Agent based on http://karpathy.github.io/2016/05/31/rl/
 
     # Arguments:
       mb_size: mini batch size
@@ -34,6 +34,9 @@ class PGagent(Agent):
       save_name: agent model name
       dataset_size: size of te replay memory
       number_of_episodes: number of episode
+      load: Boolean value to decide if you want to load previously saved models or not
+      render: Boolean value to deicide if you want to render the gameplay
+      gamma: Discounted Reward factor
     """
     def __init__(self, mb_size=32, save_name='pg', dataset_size=2000,\
                  state_size=4, action_size=6,  \
@@ -56,6 +59,7 @@ class PGagent(Agent):
 
         self.build_model(load)
 
+    # Function to calculate discounted rewards if a vector of rewards for the complete episode are given
     def discount_rewards(self,r):
         """ take 1D float array of rewards and compute discounted reward """
         discounted_r = np.zeros_like(r)
@@ -66,7 +70,7 @@ class PGagent(Agent):
             discounted_r[t] = running_add
         return discounted_r
 
-        
+    # Build the policy gradient model
     def build_model(self, load):
         """
         Builds neural networks. Loads previous weights autoamtically.
@@ -89,6 +93,7 @@ class PGagent(Agent):
 
         self.model = model
 
+    # given the previous state and action, predict the next action
     def act(self, state):
         """
         Given a state, do an action using actor network
@@ -112,6 +117,8 @@ class PGagent(Agent):
         Arguments:
          env: gym environment
         """
+
+        # Initialize hyperparameters
         s_t = get_state(get_positions(env.reset()))
         xs,dlogps,drs,act = [],[],[],[]
         running_reward = None
@@ -121,6 +128,8 @@ class PGagent(Agent):
         wins =0
         total = 0
         action_word = {1:'stay', 2:'up', 3:'down'}
+
+        # Training loop
         while(True):
             if(self.render): env.render()
 
@@ -135,6 +144,7 @@ class PGagent(Agent):
             reward_sum += reward
             drs.append(reward)
 
+            # printing results
             if (reward !=0):
                 total+=1
                 if self.verbose:
@@ -146,7 +156,7 @@ class PGagent(Agent):
             if done: # an episode finished
                 ## train for k epochs
                 episode_number+=1
-                #pdb.set_trace()
+                print('Episode No: %d' %(episode_number))
                 env.reset()
 
                 if(episode_number % self.batch_size == 0):
@@ -161,15 +171,17 @@ class PGagent(Agent):
                     eact = eact_temp
 
                     xs, dlogps, drs, act = [],[],[],[] # reset arrays
+                    
                     # compute the discounted rewards backwards
                     discounted_epr = self.discount_rewards(epr)
                     discounted_epr -= np.mean(discounted_epr)
                     discounted_epr /= np.std(discounted_epr)
 
-                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=True)
+                    # train the policy gradient model
+                    self.model.fit(x=epx,y=discounted_epr*eact, verbose=False)
                     self.model.save(self.save_name + '.h5')
 
-
+# Given the probablity distribution of the actions, sample one of them
 def action_sample(aprob):
     cumm_aprob = np.zeros_like(aprob)
     cumm_aprob[0,0] = aprob[0,0]
