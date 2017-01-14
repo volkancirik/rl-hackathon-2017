@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 
 import pickle
 import gym
+from gym import wrappers
 import pdb
 
 import keras.models as M
@@ -41,7 +42,7 @@ class PGagent(Agent):
     def __init__(self, mb_size=32, save_name='pg', dataset_size=2000,\
                  state_size=4, action_size=6,  \
                  epsilon = 1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000, \
-                 verbose = False, load=True, render=False, batch_size=10, gamma = 0.99):
+                 verbose = False, load=False, render=False, batch_size=10, gamma = 0.99):
         self.mb_size = mb_size
         self.save_name = save_name
         self.state_size = state_size
@@ -109,7 +110,7 @@ class PGagent(Agent):
         action = action_sample(aprob)
 
         return action, aprob
-
+    
     def train(self, env):
         """
         Train agent in environment
@@ -117,6 +118,10 @@ class PGagent(Agent):
         Arguments:
          env: gym environment
         """
+
+        EXP_FOLDER = '/tmp/pong-pg-experiment-0/'
+        rmdir(EXP_FOLDER)
+        env = wrappers.Monitor(env, EXP_FOLDER)
 
         # Initialize hyperparameters
         s_t = get_state(get_positions(env.reset()))
@@ -193,3 +198,9 @@ def action_sample(aprob):
         if(sample < cumm_aprob[0,i]):
             return i+1
 
+def rmdir(top):
+    for root, dirs, files in os.walk(top, topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
