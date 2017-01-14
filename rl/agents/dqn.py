@@ -26,7 +26,7 @@ class QLearningAgent(Agent):
       dataset_size: size of te replay memory
       number_of_episodes: number of episode
     """
-    def __init__(self, mb_size=32, save_name='dqn', dataset_size=2000,\
+    def __init__(self, mb_size=32, save_name='dqn_hot', dataset_size=2000,\
         state_size=6, action_size=3, verbose=False, \
         epsilon=1.0, min_epsilon=0.2, decay=0.9, number_of_episodes=100000):
         self.mb_size = mb_size
@@ -50,7 +50,7 @@ class QLearningAgent(Agent):
         Builds neural networks. Loads previous weights autoamtically.
         """
         model = Sequential()
-        model.add(Dense(4, input_shape=(self.state_size+1,), activation='relu', init='lecun_uniform'))
+        model.add(Dense(12, input_shape=(self.state_size+3,), activation='relu', init='lecun_uniform'))
         model.add(Dense(8, activation='relu', init='lecun_uniform'))
         model.add(Dense(8, activation='relu', init='lecun_uniform'))
         model.add(Dense(1, activation='linear', init='lecun_uniform'))
@@ -110,9 +110,9 @@ class QLearningAgent(Agent):
                     a_t = self.act(s_t)
                 else:
                     distance = s_t[0] - s_t[3]
-                    if distance > 0.3:
+                    if distance > 0.4:
                         a_t = 2
-                    elif distance < -0.3:
+                    elif distance < -0.4:
                         a_t = 3
                     else:
                         a_t = np.random.randint(1, 4)
@@ -124,7 +124,7 @@ class QLearningAgent(Agent):
                 (o_t1, r_t, done, _) = env.step(a_t)
 
                 if r_t == 1:
-                    n_win +=1
+                    n_win += 1
                 elif r_t == -1:
                     n_loss += 1
 
@@ -149,7 +149,7 @@ class QLearningAgent(Agent):
 
             # create targets (no terminal state in pong)
             tts = np.zeros((minibatch.shape[0], 1))
-            sss = np.zeros((minibatch.shape[0], s_t.size+1))
+            sss = np.zeros((minibatch.shape[0], s_t.size+3))
             for i in range(0, tts.shape[0]):
                 (ss, aa, rr, ss_) = unpackage_replay(minibatch[i, :])
                 sss[i, :] = merge_state_action(ss, aa)
@@ -164,11 +164,20 @@ class QLearningAgent(Agent):
             # decay epsilon
             self.epsilon -= 1.0 / min(self.number_of_episodes, 1000)
             self.epsilon = max(self.min_epsilon, self.epsilon)
+            if n_win == 0 and self.epsilon < 0.5:
+                self.epsilon += 1.0 / min(self.number_of_episodes, 100)
+
             print 'Episode', iepisode, 'Epsilon', self.epsilon, 'Wins', n_win, 'Losses', n_loss
 
 
 def merge_state_action(s_t, a_t):
-    return np.concatenate((s_t, (a_t,)))[None, :]
+    assert a_t in [1, 2, 3]
+    # a_t = 1 -> 0 0 1
+    # a_t = 2 -> 0 1 0
+    # a_t = 3 -> 1 0 0
+    result = np.concatenate((s_t, np.zeros((3,))))[None, :]
+    result[0, -np.int(a_t)] = 1
+    return result
 
 def package_replay(s_t, a_t, r_t, s_t1):
     package = np.zeros((s_t.size*2 + 2))

@@ -82,7 +82,7 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
         assert np.sum(erosion) in [1, 2] # no other object detected
         ball[0] = np.mean(np.where(np.any(erosion, 0))[0])
         ball[1] = np.mean(np.where(np.any(erosion, 1))[0])
-        if np.any(np.isnan(last_ball_position)) == False:
+        if not np.any(np.isnan(last_ball_position)):
             ball_dicrection[0] = ball[0] - last_ball_position[0]
             ball_dicrection[1] = ball[1] - last_ball_position[1]
         last_ball_position[0] = ball[0]
