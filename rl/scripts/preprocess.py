@@ -4,7 +4,6 @@ from scipy.ndimage.morphology import binary_erosion
 
 start_field = (20, 34)
 end_field = (140, 194)
-field_size = (160, 160)
 bar_right_columns = np.array([140, 141, 142, 143])
 bar_left_columns = np.array([16, 17, 18, 19])
 
@@ -112,15 +111,14 @@ def get_state(position_dict, add_direction=False):
     position_dict['left_bar'] = (position_dict['left_bar'] - 80) / 80.0
     position_dict['ball'] = (position_dict['ball'] - 80) / 80.0
 
+    # y position of self, opponent and ball (x,y) position
     state = np.array([position_dict['right_bar'][1], \
-        position_dict['left_bar'][0], \
+        position_dict['left_bar'][1], \
         position_dict['ball'][0], \
         position_dict['ball'][1]])
 
     if add_direction:
         position_dict['ball_dicrection'] = position_dict['ball_dicrection'] / 80.0
-        state = np.concatenate(state, position_dict['ball_dicrection'])
+        state = np.concatenate((state, position_dict['ball_dicrection']))
 
-
-    # y position of self, opponent and ball (x,y) position
     return state
