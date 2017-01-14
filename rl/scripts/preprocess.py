@@ -8,12 +8,13 @@ field_size = (160, 160)
 bar_right_columns = np.array([140, 141, 142, 143])
 bar_left_columns = np.array([16, 17, 18, 19])
 
-def get_positions(img):
+def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
     '''
     Parses the akari RGB images and returns a dict with:
      - left/right bar position
      - ball position
      - distance between balla nd right bar (our agent)
+    If last_ball_position is given, it will also return ball_dicrection
     '''
     # preprocessing
     field = img[start_field[1]:end_field[1], :, :]
@@ -77,31 +78,49 @@ def get_positions(img):
 
     # ball (only remaining object (if present))
     erosion = binary_erosion(binary_field, ball_element)
+    ball_dicrection = np.array([0, 0])
     if np.sum(erosion):
         assert np.sum(erosion) in [1, 2] # no other object detected
         ball[0] = np.mean(np.where(np.any(erosion, 0))[0])
         ball[1] = np.mean(np.where(np.any(erosion, 1))[0])
+        if np.any(np.isnan(last_ball_position)) == False:
+            ball_dicrection[0] = ball[0] - last_ball_position[0]
+            ball_dicrection[1] = ball[1] - last_ball_position[1]
+        last_ball_position[0] = ball[0]
+        last_ball_position[1] = ball[1]
     else: # place ball in front of oponnent (left bar)
         ball[0] = left_bar[0] + 2
         ball[1] = left_bar[1]
+        last_ball_position = np.array([np.NaN, np.NaN])
+
 
     distance_between_ball_and_left_bar = np.sqrt((ball[0]-right_bar[0])**2 + (ball[1]-right_bar[1])**2)
 
-    return {'left_bar': left_bar, 'right_bar': right_bar, 'ball': ball, 'distance': distance_between_ball_and_left_bar}
+    return {'left_bar': left_bar, 'right_bar': right_bar, \
+    'ball': ball, 'distance': distance_between_ball_and_left_bar, \
+    'ball_dicrection': ball_dicrection, 'last_ball_position': last_ball_position}
 
 
 
-def get_state(position_dict):
+def get_state(position_dict, add_direction=False):
     '''
-    Given the psotions dict, it returns a subset of normalized positions
+    Given the psotions dict, it returns a subset of normalized positions.
+    In addition it can add the normalized direction vector
     '''
     # center field and normalize to -1..1
     position_dict['right_bar'] = (position_dict['right_bar'] - 80) / 80.0
     position_dict['left_bar'] = (position_dict['left_bar'] - 80) / 80.0
     position_dict['ball'] = (position_dict['ball'] - 80) / 80.0
 
-    # y position of self, opponent and ball (x,y) position
-    return np.array([position_dict['right_bar'][1], \
+    state = np.array([position_dict['right_bar'][1], \
         position_dict['left_bar'][0], \
         position_dict['ball'][0], \
         position_dict['ball'][1]])
+
+    if add_direction:
+        position_dict['ball_dicrection'] = position_dict['ball_dicrection'] / 80.0
+        state = np.concatenate(state, position_dict['ball_dicrection'])
+
+
+    # y position of self, opponent and ball (x,y) position
+    return state
