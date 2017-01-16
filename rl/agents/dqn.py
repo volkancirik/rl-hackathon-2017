@@ -26,9 +26,9 @@ class QLearningAgent(Agent):
       dataset_size: size of te replay memory
       number_of_episodes: number of episode
     """
-    def __init__(self, mb_size=32, save_name='dqn_hot_equal', dataset_size=2000,\
+    def __init__(self, mb_size=64, save_name='dqn', dataset_size=10000,\
         state_size=6, action_size=3, verbose=False, \
-        epsilon=1.0, min_epsilon=0.1, decay=0.9, number_of_episodes=100000):
+        epsilon=1.0, min_epsilon=0.1, decay=0.99, number_of_episodes=100000):
         self.mb_size = mb_size
         self.save_name = save_name
         self.state_size = 6 #state_size
@@ -41,7 +41,8 @@ class QLearningAgent(Agent):
         self.number_of_episodes = number_of_episodes
         self.dataset_size = dataset_size
 
-        self.buffer = experience_buffer(buffer_size=2*self.dataset_size, reward_index=self.state_size+1)
+        self.buffer = experience_buffer(buffer_size=20*self.dataset_size, \
+            reward_index=self.state_size+1, action_index=self.state_size)
 
         self.build_model()
 
@@ -110,9 +111,9 @@ class QLearningAgent(Agent):
                     a_t = self.act(s_t)
                 else:
                     distance = s_t[0] - s_t[3]
-                    if distance > 0.4:
+                    if distance > 0.5:
                         a_t = 2
-                    elif distance < -0.4:
+                    elif distance < -0.5:
                         a_t = 3
                     else:
                         a_t = np.random.randint(1, 4)
@@ -130,8 +131,8 @@ class QLearningAgent(Agent):
 
                 # get state
                 positions = get_positions(o_t1, last_ball_position=last_ball_position)
-                last_ball_position = positions['last_ball_position']
-                if  positions['distance'] <= 8.0:
+                last_ball_position = positions['ball']
+                if  positions['distance'] <= 7.8:
                     r_t = 0.1
                 s_t1 = get_state(positions, add_direction=True)
 
@@ -158,7 +159,7 @@ class QLearningAgent(Agent):
                 tts[i] = rr + self.decay * np.max(qs)
 
             # train network
-            self.model.fit(sss, tts, nb_epoch=5, batch_size=self.mb_size, verbose=False)
+            self.model.fit(sss, tts, nb_epoch=10, batch_size=self.mb_size, verbose=False)
             self.model.save_weights(self.save_name + '.h5')
 
             # decay epsilon
