@@ -13,9 +13,6 @@ class experience_buffer():
         self.reward_index = reward_index
         self.action_index = action_index
 
-    def almost_full(self):
-        return self.buffer.shape[0] >= self.buffer_size*0.75
-
     '''
     Adds new experiences (np.array of size entries x length).
     It replaces the oldest entries if necessary
@@ -30,7 +27,6 @@ class experience_buffer():
             self.buffer = np.empty(np.concatenate(([0], experience.shape[1:])))
 
         self.buffer = np.append(self.buffer, experience, axis=0)
-
 
     '''
     Adds new experiences (np.array of size entries x length).

@@ -52,7 +52,7 @@ class QLearningAgent(Agent):
         """
         model = Sequential()
         model.add(Dense(12, input_shape=(self.state_size+3,), activation='relu', init='lecun_uniform'))
-        model.add(Dense(8, activation='relu', init='lecun_uniform'))
+        model.add(Dense(12, activation='relu', init='lecun_uniform'))
         model.add(Dense(8, activation='relu', init='lecun_uniform'))
         model.add(Dense(1, activation='linear', init='lecun_uniform'))
 
@@ -132,9 +132,11 @@ class QLearningAgent(Agent):
                 # get state
                 positions = get_positions(o_t1, last_ball_position=last_ball_position)
                 last_ball_position = positions['ball']
-                if  positions['distance'] <= 7.8:
+                if  positions['distance'] < 8:
                     r_t = 0.1
                 s_t1 = get_state(positions, add_direction=True)
+                if r_t == 0 and (s_t1[0] < -1 or s_t1[0] > 1):
+                    r_t -= 0.1
 
                 # replay memory
                 replay_buffer[j, :] = package_replay(s_t, a_t, r_t, s_t1)

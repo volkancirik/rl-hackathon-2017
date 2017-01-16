@@ -1,6 +1,7 @@
-
 import numpy as np
 from scipy.ndimage.morphology import binary_erosion
+import matplotlib.pyplot as plt
+
 
 start_field = (20, 34)
 end_field = (140, 194)
@@ -53,9 +54,6 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
                 else: # lower part is clipped
                     left_bar[1] = positions[0] + 7.5
 
-            # remove from binary_field -> easier to find ball
-            binary_field[np.ix_(positions, bar_left_columns)] = False
-
         # right bar
         verify_right_bar_is_there = np.vectorize(lambda x: np.any(x == bar_right_columns))
         if np.sum(verify_right_bar_is_there(columns)) == 4:
@@ -72,14 +70,12 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
                 else: # lower part is clipped
                     right_bar[1] = positions[0] + 7.5
 
-            # remove from binary_field -> easier to find ball
-            binary_field[np.ix_(positions, bar_right_columns)] = False
-
-        # ball (only remaining object (if present))
-        assert np.sum(binary_field) <= 10
-        if np.sum(binary_field) > 0:
-            ball[0] = np.mean(np.where(np.any(binary_field, 0))[0])
-            ball[1] = np.mean(np.where(np.any(binary_field, 1))[0])
+        # ball
+        ball_field = np.all(field == [236, 236, 236], 2)
+        assert np.sum(ball_field) <= 10
+        if np.sum(ball_field) > 0:
+            ball[0] = np.mean(np.where(np.any(ball_field, 0))[0])
+            ball[1] = np.mean(np.where(np.any(ball_field, 1))[0])
             if not np.any(np.isnan(last_ball_position)):
                 if np.sum(np.abs(ball - last_ball_position)) < 50:
                     ball_dicrection[0] = ball[0] - last_ball_position[0]
@@ -89,9 +85,19 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
             ball[0] = last_ball_position[0]
             ball[1] = last_ball_position[1]
 
-    distance_between_ball_and_left_bar = np.sqrt((ball[0]-right_bar[0])**2 + (ball[1]-right_bar[1])**2)
-    if ball[0] > right_bar[0]:
+    distance_between_ball_and_left_bar = right_bar[0] - ball[0]
+
+    if np.abs(ball[1]-right_bar[1]) >= 20 or ball_dicrection[0] >= 0:
         distance_between_ball_and_left_bar = np.Inf
+
+    if False and distance_between_ball_and_left_bar < 8:
+        # overlay information
+        print distance_between_ball_and_left_bar, ball_dicrection
+        img[start_field[1]+left_bar[1], left_bar[0], :] = 0.5
+        img[start_field[1]+right_bar[1], right_bar[0], :] = 0.5
+        img[start_field[1]+ball[1], ball[0], :] = 0.5
+        plt.imshow(img)
+        plt.show()
 
     return {'left_bar': left_bar, 'right_bar': right_bar, \
         'ball': ball, 'distance': distance_between_ball_and_left_bar, \
