@@ -1,6 +1,7 @@
 
 import numpy as np
 from scipy.ndimage.morphology import binary_erosion
+#import matplotlib.pyplot as plt
 
 start_field = (20, 34)
 end_field = (140, 194)
@@ -24,12 +25,11 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
     # find right bar
     left_bar = np.empty(2)
     left_bar[0] = np.mean(bar_left_columns)
-    left_bar[1] = 79.5
+    left_bar[1] = 80
     right_bar = np.empty(2)
-    right_bar[0] = np.mean(bar_left_columns)
-    right_bar[1] = 79.5
-    ball = np.empty(2)
-    ball[:] = np.nan
+    right_bar[0] = np.mean(bar_right_columns)
+    right_bar[1] = 80
+    ball = np.array([79, 83])
 
     # erosion elements
     bar_element = np.empty((1, 4))
@@ -48,10 +48,10 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
         if positions.size == 16:
             left_bar[1] = np.mean(positions)
         else:
-            if positions[0] < binary_field.shape[0]/2: # lower part is clipped
+            if positions[0] < binary_field.shape[0]/2: # upper part is clipped
+                left_bar[1] = positions[-1] - 7.5
+            else: # lower part is clipped
                 left_bar[1] = positions[0] + 7.5
-            else: # upper part is clipped
-                left_bar[1] = positions[-1] + 7.5
 
         # remove from binary_field -> easier to find ball
         binary_field[np.ix_(positions, bar_left_columns)] = False
@@ -67,10 +67,10 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
         if positions.size == 16:
             right_bar[1] = np.mean(positions)
         else:
-            if positions[0] < binary_field.shape[0]/2: # lower part is clipped
+            if positions[0] < binary_field.shape[0]/2: # upper part is clipped
+                right_bar[1] = positions[-1] - 7.5
+            else: # lower part is clipped
                 right_bar[1] = positions[0] + 7.5
-            else: # upper part is clipped
-                right_bar[1] = positions[-1] + 7.5
 
         # remove from binary_field -> easier to find ball
         binary_field[np.ix_(positions, bar_right_columns)] = False
@@ -83,15 +83,19 @@ def get_positions(img, last_ball_position=np.array([np.NaN, np.NaN])):
         ball[0] = np.mean(np.where(np.any(erosion, 0))[0])
         ball[1] = np.mean(np.where(np.any(erosion, 1))[0])
         if not np.any(np.isnan(last_ball_position)):
-            ball_dicrection[0] = ball[0] - last_ball_position[0]
-            ball_dicrection[1] = ball[1] - last_ball_position[1]
+            if np.sum(np.abs(ball - last_ball_position)) < 100:
+                ball_dicrection[0] = ball[0] - last_ball_position[0]
+                ball_dicrection[1] = ball[1] - last_ball_position[1]
+
         last_ball_position[0] = ball[0]
         last_ball_position[1] = ball[1]
-    else: # place ball in front of oponnent (left bar)
-        ball[0] = left_bar[0] + 2
-        ball[1] = left_bar[1]
-        last_ball_position = np.array([np.NaN, np.NaN])
 
+    # overlay information
+    #img[start_field[1]+left_bar[1], left_bar[0], :] = 0.5
+    #img[start_field[1]+right_bar[1], right_bar[0], :] = 0.5
+    #img[start_field[1]+ball[1], ball[0], :] = 0.5
+    #plt.imshow(img)
+    #plt.show()
 
     distance_between_ball_and_left_bar = np.sqrt((ball[0]-right_bar[0])**2 + (ball[1]-right_bar[1])**2)
 
@@ -107,18 +111,13 @@ def get_state(position_dict, add_direction=False):
     In addition it can add the normalized direction vector
     '''
     # center field and normalize to -1..1
-    position_dict['right_bar'] = (position_dict['right_bar'] - 80) / 80.0
-    position_dict['left_bar'] = (position_dict['left_bar'] - 80) / 80.0
-    position_dict['ball'] = (position_dict['ball'] - 80) / 80.0
-
     # y position of self, opponent and ball (x,y) position
-    state = np.array([position_dict['right_bar'][1], \
-        position_dict['left_bar'][1], \
-        position_dict['ball'][0], \
-        position_dict['ball'][1]])
+    state = np.array([(position_dict['right_bar'][1]-80)/80.0, \
+        (position_dict['left_bar'][1]-80)/80.0, \
+        (position_dict['ball'][0]-80)/80.0, \
+        (position_dict['ball'][1]-80)/80.0])
 
     if add_direction:
-        position_dict['ball_dicrection'] = position_dict['ball_dicrection'] / 80.0
-        state = np.concatenate((state, position_dict['ball_dicrection']))
+        state = np.concatenate((state, position_dict['ball_dicrection']/80.0))
 
     return state
