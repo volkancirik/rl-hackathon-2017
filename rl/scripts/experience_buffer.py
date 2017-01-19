@@ -55,7 +55,7 @@ class experience_buffer():
             self.buffer = np.empty(np.concatenate(([0], experience.shape[1:])))
 
         self.buffer = np.append(self.buffer, experience, axis=0)
-        self.buffer = unique_entries(self.buffer)
+        #self.buffer = unique_entries(self.buffer)
 
     '''
     Samples the buffer randomly

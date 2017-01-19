@@ -26,8 +26,8 @@ class QLearningAgent(Agent):
       dataset_size: size of te replay memory
       number_of_episodes: number of episode
     """
-    def __init__(self, mb_size=64, save_name='dqn', dataset_size=10000,\
-        state_size=6, action_size=3, verbose=False, \
+    def __init__(self, mb_size=64, save_name='dqn_temporal', dataset_size=10000,\
+        state_size=6, action_size=3, verbose=False, temporal_chain=2,\
         epsilon=1.0, min_epsilon=0.1, decay=0.99, number_of_episodes=100000):
         self.mb_size = mb_size
         self.save_name = save_name
@@ -40,9 +40,10 @@ class QLearningAgent(Agent):
         self.min_epsilon = min_epsilon
         self.number_of_episodes = number_of_episodes
         self.dataset_size = dataset_size
+        self.temporal_chain = temporal_chain
 
         self.buffer = experience_buffer(buffer_size=20*self.dataset_size, \
-            reward_index=self.state_size+1, action_index=self.state_size)
+            reward_index=1, action_index=0)
 
         self.build_model()
 
@@ -51,8 +52,9 @@ class QLearningAgent(Agent):
         Builds neural networks. Loads previous weights autoamtically.
         """
         model = Sequential()
-        model.add(Dense(12, input_shape=(self.state_size+3,), activation='relu', init='lecun_uniform'))
-        model.add(Dense(12, activation='relu', init='lecun_uniform'))
+        model.add(Dense(24, input_shape=(self.state_size*self.temporal_chain+3,), activation='relu', init='lecun_uniform'))
+        model.add(Dense(24, activation='relu', init='lecun_uniform'))
+        model.add(Dense(16, activation='relu', init='lecun_uniform'))
         model.add(Dense(8, activation='relu', init='lecun_uniform'))
         model.add(Dense(1, activation='linear', init='lecun_uniform'))
 
@@ -84,7 +86,7 @@ class QLearningAgent(Agent):
         """
         q_values = np.zeros((self.action_size, ))
         for a in range(q_values.size):
-            q_values[a] = self.model.predict(merge_state_action(state, 1+a))
+            q_values[a] = self.model.predict(self.merge_state_action(1+a, state))
         return q_values
 
     def train(self, env):
@@ -101,14 +103,16 @@ class QLearningAgent(Agent):
                 print 'Episode', iepisode
             last_ball_position = np.array([np.NaN, np.NaN])
 
-            replay_buffer = np.empty((self.dataset_size, self.state_size*2+2))
+            replay_buffer = np.empty((self.dataset_size, self.state_size*(self.temporal_chain+1)+2))
             n_win = 0
             n_loss = 0
 
-            for j in range(self.dataset_size):
+            states = [s_t]
+
+            for j in range(self.dataset_size+self.temporal_chain-1):
                 # select action a
-                if random.random() > self.epsilon:
-                    a_t = self.act(s_t)
+                if random.random() > self.epsilon and len(states) == self.temporal_chain:
+                    a_t = self.act(states)
                 else:
                     distance = s_t[0] - s_t[3]
                     if distance > 0.5:
@@ -133,13 +137,16 @@ class QLearningAgent(Agent):
                 positions = get_positions(o_t1, last_ball_position=last_ball_position)
                 last_ball_position = positions['ball']
                 if  positions['distance'] < 8:
-                    r_t = 0.1
+                    r_t = 0.5
                 s_t1 = get_state(positions, add_direction=True)
                 if r_t == 0 and (s_t1[0] < -1 or s_t1[0] > 1):
-                    r_t -= 0.1
+                    r_t = -0.5
 
                 # replay memory
-                replay_buffer[j, :] = package_replay(s_t, a_t, r_t, s_t1)
+                states.append(s_t1)
+                if len(states) == self.temporal_chain+1:
+                    replay_buffer[j-self.temporal_chain+1, :] = self.package_replay(a_t, r_t, states)
+                    del states[0]
 
                 s_t = s_t1
 
@@ -152,12 +159,12 @@ class QLearningAgent(Agent):
 
             # create targets (no terminal state in pong)
             tts = np.zeros((minibatch.shape[0], 1))
-            sss = np.zeros((minibatch.shape[0], s_t.size+3))
+            sss = np.zeros((minibatch.shape[0], s_t.size*self.temporal_chain+3))
             for i in range(0, tts.shape[0]):
-                (ss, aa, rr, ss_) = unpackage_replay(minibatch[i, :])
-                sss[i, :] = merge_state_action(ss, aa)
+                (aa, rr, states) = self.unpackage_replay(minibatch[i, :])
+                sss[i, :] = self.merge_state_action(aa, states[:-1])
 
-                qs = self.get_q_values(ss_)
+                qs = self.get_q_values(states[1:])
                 tts[i] = rr + self.decay * np.max(qs)
 
             # train network
@@ -173,27 +180,34 @@ class QLearningAgent(Agent):
             print 'Episode', iepisode, 'Epsilon', self.epsilon, 'Wins', n_win, 'Losses', n_loss
 
 
-def merge_state_action(s_t, a_t):
-    assert a_t in [1, 2, 3]
-    # a_t = 1 -> 0 0 1
-    # a_t = 2 -> 0 1 0
-    # a_t = 3 -> 1 0 0
-    result = np.concatenate((s_t, np.zeros((3,))))[None, :]
-    result[0, -np.int(a_t)] = 1
-    return result
+    def merge_state_action(self, a_t, states):
+        assert a_t in [1, 2, 3]
+        # a_t = 1 -> 0 0 1
+        # a_t = 2 -> 0 1 0
+        # a_t = 3 -> 1 0 0
+        result = np.zeros((3,))
+        result[-np.int(a_t)] = 1
+        for i in range(len(states)):
+            result = np.concatenate((result, states[i]))
+        
+        return result[None, :]
 
-def package_replay(s_t, a_t, r_t, s_t1):
-    package = np.zeros((s_t.size*2 + 2))
-    package[0:s_t.size] = s_t
-    package[s_t.size] = a_t
-    package[s_t.size+1] = r_t
-    package[-s_t.size:] = s_t1
-    return package[None, :]
+    def package_replay(self, a_t, r_t, states):
+        state_size = states[0].size
+        package = np.zeros((state_size*len(states) + 2))
+        package[0] = a_t
+        package[1] = r_t
+        for i in range(len(states)):
+            package[2+i*state_size:2+(i+1)*state_size] = states[i]
+        return package[None, :]
 
-def unpackage_replay(package):
-    size = (package.size-2)/2
-    s_t = package[:size]
-    a_t = package[size]
-    r_t = package[size+1]
-    s_t1 = package[-size:]
-    return (s_t, a_t, r_t, s_t1)
+    def unpackage_replay(self, package):
+        state_size = (package.size-2.0)/(self.temporal_chain+1)
+        assert state_size == np.int(state_size)
+        state_size = np.int(state_size)
+        a_t = package[0]
+        r_t = package[1]
+        states = []
+        for i in range(self.temporal_chain+1):
+            states.append(package[2+i*state_size:2+(i+1)*state_size])
+        return (a_t, r_t, states)
