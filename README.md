@@ -13,18 +13,18 @@ This repo assumes familiarity in ML in general(algorithms, tools). Our starting 
 - [Deep Deterministic Policy Gradients in TensorFlow](http://pemami4911.github.io/blog/2016/08/21/ddpg-rl.html)
 
 In addition to these awesome resources, there are bunch of open-source RL implementations out there, we make use of following resources as starting points and built on top of them:
-- [Actor Critic with OpenAI Gym¶](https://github.com/gregretkowski/notebooks/blob/master/ActorCritic-with-OpenAI-Gym.ipynb)
+- [Actor Critic with OpenAI Gym](https://github.com/gregretkowski/notebooks/blob/master/ActorCritic-with-OpenAI-Gym.ipynb)
 - [DQN with Experience Replay](https://github.com/sherjilozair/dqn)
 - [Stochastic Policy Gradients on Pong](https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5)
 
 ### Tools
 To move quickly we make use of following tools:
 - [OpenAI's Gym](https://gym.openai.com/docs) for experimental environment. Before writing a single line of code, we recommend reading the documentation.
-- [Keras](https://keras.io/) for quicky prototyping neural network models.
+- [Keras](https://keras.io/) for quickly prototyping neural network models.
 - [Jupyter Notebooks](http://jupyter.org/) for fast and interactive development.
 
 ## Algorithms
-Here we briefly explain 3 RL algorithms where we implemented in this repository. You can use the type of agent un `run_environment.py`. Please take a look at corresponding implementation under `rl/agents/`. We use Pong as an example environment. But first we do preprocessing so that we can do faster experiments.
+Here we briefly explain 3 RL algorithms where we implemented in this repository. You can use the type of agent in `run_environment.py`. Please take a look at corresponding implementation under `rl/agents/`. We use Pong as an example environment. But first we do preprocessing so that we can do faster experiments.
 
 ##### From RGB-Pong to Number-Pong
 The OpenAI game [RGB-Pong](https://gym.openai.com/envs/Pong-v0) provides a 210x160x3 RGB images to be used as a state. We simplified this state to 6 numbers using image processing. The steps are visualized in this graphic:
@@ -51,7 +51,7 @@ The beauty of this method is that the policy gradient network could be anything,
 
 ![Policy gradient Ping Pong](./screenshots/gif-pg.gif)
 
-Please Note: In the implementation of Vanilla Policy Gradients, we have used crossentropy loss to train the MLP as a categorical classifier which is different from the standard approached of using MSE (mean square error) as the loss function.
+Please Note: In the implementation of Vanilla Policy Gradients, we have used cross-entropy loss to train the MLP as a categorical classifier which is different from the standard approached of using MSE (mean square error) as the loss function.
 
 ### Actor-Critic Policy Gradients
 
@@ -59,7 +59,7 @@ Please Note: In the implementation of Vanilla Policy Gradients, we have used cro
 
 ![Loser Agent](screenshots/gif-pongLoser.gif)
 
-Unfortunately the model does not learn a good policy in couple of hourse we have. But [here's a lazy one](https://www.youtube.com/watch?v=N4u-mmF64tQ) learned by chance where it achieves perfect score without doing much.
+Unfortunately the model does not learn a good policy in couple of horse we have. But [here's a lazy one](https://www.youtube.com/watch?v=N4u-mmF64tQ) learned by chance where it achieves perfect score without doing much.
 
 ## Creating A New Environment
 If you would like to exploit the Gym for a target task in your mind, you can create a new environment. For an example, we would like to create an environment for a simplified computer vision problem.
